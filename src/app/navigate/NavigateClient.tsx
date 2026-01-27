@@ -70,7 +70,7 @@ function phaseForDay(dayIndex: number): Phase {
   return "Follicular";
 }
 
-// ✅ Key fix: return typed RiskLevel literals (not generic string)
+// ✅ typed RiskLevel literals
 function riskFor(phase: Phase): { risk: RiskLevel; riskNote: string } {
   if (phase === "PMS") return { risk: "High sensitivity", riskNote: "Emotions may spike faster." };
   if (phase === "Menstrual") return { risk: "Be mindful", riskNote: "Lower energy and tolerance." };
@@ -78,7 +78,23 @@ function riskFor(phase: Phase): { risk: RiskLevel; riskNote: string } {
   return { risk: "Low friction", riskNote: "Generally easier interaction window." };
 }
 
-function copy(phase: Phase, age: number) {
+function startOfDay(d: Date) {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x;
+}
+
+function pick(lines: string[], dayIndex: number, salt: number) {
+  const idx = (dayIndex * 3 + salt) % lines.length;
+  return lines[idx];
+}
+
+function ovulationPeakDayIndex() {
+  // default cycle assumption (28 days) → peak day ~14
+  return Math.round(DEFAULTS.cycleLength / 2);
+}
+
+function copy(phase: Phase, age: number, dayIndex: number) {
   const t = ageTone(age);
 
   if (phase === "Menstrual")
@@ -93,17 +109,42 @@ function copy(phase: Phase, age: number) {
       avoid: "Pushing decisions, surprise debates.",
     };
 
-  if (phase === "Ovulatory")
+  if (phase === "Ovulatory") {
+    const peak = dayIndex === ovulationPeakDayIndex();
+
+    const libidoNormal = [
+      "Interest tends to be higher than average.",
+      "Signals are clearer today.",
+      "Less guesswork than usual.",
+      "Receptivity is generally better.",
+      "Flirting is less risky today.",
+      "Affection is more likely to be welcomed.",
+      "Momentum builds easier.",
+      "If it’s a no, it’s still a no — but you’re less likely to misread.",
+    ];
+
+    const libidoPeak = [
+      "Interest is usually at its highest today.",
+      "Signals are harder to miss.",
+      "Less ambiguity than usual.",
+      "Responses come faster.",
+      "If there’s attraction, it shows more clearly today.",
+      "Affection is more likely to be returned.",
+      "Momentum builds easier.",
+      "If it’s a no, it’s still a no — but you’re less likely to misread.",
+    ];
+
     return {
-      mood: `Often confident and expressive. Variability is ${t.variability}.`,
-      libido: "Often higher; playful connection can land well.",
+      mood: `Often more open and expressive. Variability is ${t.variability}.`,
+      libido: peak ? pick(libidoPeak, dayIndex, 2) : pick(libidoNormal, dayIndex, 2),
       energy: "Higher drive is more likely.",
       stress: "Tolerance is often stronger.",
-      communication: "Warm, direct, playful.",
-      partnerFocus: "Connection and affection.",
-      helps: "Attention, dates, closeness.",
-      avoid: "Emotional distance, neglect.",
+      communication: "Clear, warm, direct. Don’t overtalk it.",
+      partnerFocus: "This is usually an easier day to reconnect.",
+      helps: "Be present. Keep it natural.",
+      avoid: "Pushing, assumptions, making it heavy.",
     };
+  }
 
   if (phase === "Luteal")
     return {
@@ -119,14 +160,14 @@ function copy(phase: Phase, age: number) {
 
   if (phase === "PMS")
     return {
-      mood: `More emotionally sensitive. Variability is ${t.variability}.`,
+      mood: `More sensitive day-to-day. Variability is ${t.variability}.`,
       libido: "Often lower or inconsistent.",
       energy: "Lower energy is common.",
       stress: `Reactivity can be higher. Sensitivity is ${t.sensitivity}.`,
-      communication: "Validate first; avoid logic battles.",
-      partnerFocus: "De-escalate and simplify.",
-      helps: "Validation, space, emotional safety.",
-      avoid: "Debates, criticism, minimising feelings.",
+      communication: "Keep it calm; don’t turn it into a debate.",
+      partnerFocus: "Make the day simpler, not bigger.",
+      helps: "Low pressure, steady tone.",
+      avoid: "Debates, criticism, pushing decisions.",
     };
 
   // Follicular
@@ -136,16 +177,10 @@ function copy(phase: Phase, age: number) {
     energy: "Energy usually improving.",
     stress: "Resilience is often better.",
     communication: "Collaborative and direct.",
-    partnerFocus: "Planning and problem-solving window.",
-    helps: "Structure, teamwork, normal plans.",
-    avoid: "Dismissiveness, unnecessary tension.",
+    partnerFocus: "Good day for plans and normal conversations.",
+    helps: "Clear plans, follow-through.",
+    avoid: "Unnecessary tension.",
   };
-}
-
-function startOfDay(d: Date) {
-  const x = new Date(d);
-  x.setHours(0, 0, 0, 0);
-  return x;
 }
 
 export default function NavigateClient() {
@@ -167,7 +202,7 @@ export default function NavigateClient() {
     const dayIndex = (o % DEFAULTS.cycleLength) + 1;
     const phase = phaseForDay(dayIndex);
     const risk = riskFor(phase);
-    const c = copy(phase, age);
+    const c = copy(phase, age, dayIndex);
     return { date, dayIndex, phase, ...risk, ...c };
   };
 
