@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 
@@ -140,8 +141,11 @@ function buildDay(day1: Date, age: number, offset: number): DayInfo {
 export default function NavigatePage() {
   const sp = useSearchParams();
 
-  const age = Number(sp.get("age") || "0");
+  const age = sp.get("age") || "";
   const day1Str = sp.get("day1") || "";
+
+  const ageNum = Number(age || "0");
+
   const day1 = useMemo(() => {
     const d = new Date(day1Str + "T12:00:00");
     return isNaN(d.getTime()) ? null : d;
@@ -159,15 +163,15 @@ export default function NavigatePage() {
   }, [day1, today]);
 
   const todayInfo = useMemo(() => {
-    if (!day1 || !age) return null;
-    return buildDay(day1, age, offsetToday < 0 ? 0 : offsetToday);
-  }, [day1, age, offsetToday]);
+    if (!day1 || !ageNum) return null;
+    return buildDay(day1, ageNum, offsetToday < 0 ? 0 : offsetToday);
+  }, [day1, ageNum, offsetToday]);
 
   const tomorrowInfo = useMemo(() => {
-    if (!day1 || !age) return null;
+    if (!day1 || !ageNum) return null;
     const base = offsetToday < 0 ? 0 : offsetToday;
-    return buildDay(day1, age, base + 1);
-  }, [day1, age, offsetToday]);
+    return buildDay(day1, ageNum, base + 1);
+  }, [day1, ageNum, offsetToday]);
 
   if (!age || !day1) {
     return (
@@ -180,7 +184,15 @@ export default function NavigatePage() {
 
   return (
     <main style={{ maxWidth: 720, margin: "40px auto", padding: 20, fontFamily: "system-ui" }}>
-      <h1 style={{ marginTop: 0 }}>Today / Tomorrow</h1>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
+        <h1 style={{ marginTop: 0 }}>Today / Tomorrow</h1>
+        <Link
+          href={`/calendar?age=${encodeURIComponent(age)}&day1=${encodeURIComponent(day1Str)}`}
+          style={{ fontSize: 14 }}
+        >
+          Monthly view
+        </Link>
+      </div>
 
       <div style={{ fontSize: 13, color: "#444", marginBottom: 14 }}>
         Built on hormonal cycle patterns. Individual responses may differ. Real life always overrides predictions.
