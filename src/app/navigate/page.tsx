@@ -6,10 +6,14 @@ import { useSearchParams } from "next/navigation";
 
 type Phase = "Menstrual" | "Follicular" | "Ovulatory" | "Luteal" | "PMS";
 
+type RiskLevel = "Low friction" | "Be mindful" | "High sensitivity";
+
 type DayInfo = {
   date: Date;
   dayIndex: number; // 1..cycleLength
   phase: Phase;
+  risk: RiskLevel;
+  riskNote: string;
   mood: string;
   libido: string;
   energy: string;
@@ -85,6 +89,40 @@ function phaseForDay(dayIndex: number, s: Settings): Phase {
   return "Follicular";
 }
 
+function riskFor(phase: Phase, age: number): { risk: RiskLevel; riskNote: string } {
+  const t = ageTone(age);
+  const ageBoost = t.sensitivity === "higher" ? " (may feel stronger with age)" : "";
+
+  if (phase === "PMS") {
+    return {
+      risk: "High sensitivity",
+      riskNote: `Small issues can feel bigger; prioritise calm and repair.${ageBoost}`,
+    };
+  }
+  if (phase === "Menstrual") {
+    return {
+      risk: "Be mindful",
+      riskNote: `Lower energy/tolerance is common; keep demands light.${ageBoost}`,
+    };
+  }
+  if (phase === "Luteal") {
+    return {
+      risk: "Be mindful",
+      riskNote: `More variability is common; reduce surprises and keep things predictable.${ageBoost}`,
+    };
+  }
+  if (phase === "Ovulatory") {
+    return {
+      risk: "Low friction",
+      riskNote: "Connection tends to be easier; closeness and playfulness often land well.",
+    };
+  }
+  return {
+    risk: "Low friction",
+    riskNote: "Often a stable window for plans and constructive conversations.",
+  };
+}
+
 function copy(phase: Phase, age: number) {
   const t = ageTone(age);
 
@@ -156,12 +194,16 @@ function buildDay(day1: Date, age: number, offset: number, s: Settings): DayInfo
   const date = addDays(day1, offset);
   const dayIndex = ((offset % s.cycleLength) + 1) as number;
   const phase = phaseForDay(dayIndex, s);
+
+  const r = riskFor(phase, age);
   const c = copy(phase, age);
 
   return {
     date,
     dayIndex,
     phase,
+    risk: r.risk,
+    riskNote: r.riskNote,
     ...c,
   };
 }
@@ -260,21 +302,49 @@ export default function NavigatePage() {
               Day {todayInfo.dayIndex} — {todayInfo.phase}
             </div>
 
+            <div style={{ marginTop: 8, fontSize: 13, color: "#444" }}>
+              <b>Relationship risk:</b> {todayInfo.risk}. {todayInfo.riskNote}
+            </div>
+
             <div style={{ marginTop: 10, display: "grid", gap: 8, fontSize: 14, lineHeight: 1.35 }}>
-              <div><b>Mood:</b> {todayInfo.mood}</div>
-              <div><b>Libido:</b> {todayInfo.libido}</div>
-              <div><b>Energy:</b> {todayInfo.energy}</div>
-              <div><b>Stress response:</b> {todayInfo.stress}</div>
-              <div><b>Communication:</b> {todayInfo.communication}</div>
-              <div><b>Partner focus:</b> {todayInfo.partnerFocus}</div>
-              <div><b>What helps:</b> {todayInfo.helps}</div>
-              <div><b>What to avoid:</b> {todayInfo.avoid}</div>
+              <div>
+                <b>Mood:</b> {todayInfo.mood}
+              </div>
+              <div>
+                <b>Libido:</b> {todayInfo.libido}
+              </div>
+              <div>
+                <b>Energy:</b> {todayInfo.energy}
+              </div>
+              <div>
+                <b>Stress response:</b> {todayInfo.stress}
+              </div>
+              <div>
+                <b>Communication:</b> {todayInfo.communication}
+              </div>
+              <div>
+                <b>Partner focus:</b> {todayInfo.partnerFocus}
+              </div>
+              <div>
+                <b>What helps:</b> {todayInfo.helps}
+              </div>
+              <div>
+                <b>What to avoid:</b> {todayInfo.avoid}
+              </div>
             </div>
           </>
         )}
       </section>
 
-      <section style={{ marginTop: 14, border: "1px solid #e6e6e6", borderRadius: 12, padding: 14, background: "#fff" }}>
+      <section
+        style={{
+          marginTop: 14,
+          border: "1px solid #e6e6e6",
+          borderRadius: 12,
+          padding: 14,
+          background: "#fff",
+        }}
+      >
         <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
           <strong>{secondaryLabel}</strong>
           <span style={{ color: "#666", fontSize: 13 }}>{tomorrowInfo ? fmt(tomorrowInfo.date) : ""}</span>
@@ -286,15 +356,35 @@ export default function NavigatePage() {
               Day {tomorrowInfo.dayIndex} — {tomorrowInfo.phase}
             </div>
 
+            <div style={{ marginTop: 8, fontSize: 13, color: "#444" }}>
+              <b>Relationship risk:</b> {tomorrowInfo.risk}. {tomorrowInfo.riskNote}
+            </div>
+
             <div style={{ marginTop: 10, display: "grid", gap: 8, fontSize: 14, lineHeight: 1.35 }}>
-              <div><b>Mood:</b> {tomorrowInfo.mood}</div>
-              <div><b>Libido:</b> {tomorrowInfo.libido}</div>
-              <div><b>Energy:</b> {tomorrowInfo.energy}</div>
-              <div><b>Stress response:</b> {tomorrowInfo.stress}</div>
-              <div><b>Communication:</b> {tomorrowInfo.communication}</div>
-              <div><b>Partner focus:</b> {tomorrowInfo.partnerFocus}</div>
-              <div><b>What helps:</b> {tomorrowInfo.helps}</div>
-              <div><b>What to avoid:</b> {tomorrowInfo.avoid}</div>
+              <div>
+                <b>Mood:</b> {tomorrowInfo.mood}
+              </div>
+              <div>
+                <b>Libido:</b> {tomorrowInfo.libido}
+              </div>
+              <div>
+                <b>Energy:</b> {tomorrowInfo.energy}
+              </div>
+              <div>
+                <b>Stress response:</b> {tomorrowInfo.stress}
+              </div>
+              <div>
+                <b>Communication:</b> {tomorrowInfo.communication}
+              </div>
+              <div>
+                <b>Partner focus:</b> {tomorrowInfo.partnerFocus}
+              </div>
+              <div>
+                <b>What helps:</b> {tomorrowInfo.helps}
+              </div>
+              <div>
+                <b>What to avoid:</b> {tomorrowInfo.avoid}
+              </div>
             </div>
           </>
         )}
