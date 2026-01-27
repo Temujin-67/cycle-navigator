@@ -75,7 +75,9 @@ export default function CalendarPage() {
         <h1 style={{ marginTop: 0 }}>Monthly View</h1>
         <p style={{ color: "#444" }}>Missing inputs. Go back and enter age + Day 1.</p>
         <div style={{ marginTop: 10 }}>
-          <Link href="/" style={{ fontSize: 14 }}>Home</Link>
+          <Link href="/" style={{ fontSize: 14 }}>
+            Home
+          </Link>
         </div>
       </main>
     );
@@ -107,21 +109,31 @@ export default function CalendarPage() {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(7, 1fr)", gap: 10 }}>
         {days.map((d) => {
           const bg =
-            d.phase === "Menstrual" ? "#f6f6ff" :
-            d.phase === "Follicular" ? "#f6fff6" :
-            d.phase === "Ovulatory" ? "#fffaf0" :
-            d.phase === "Luteal" ? "#f7fbff" :
-            "#fff6f6";
+            d.phase === "Menstrual"
+              ? "#f6f6ff"
+              : d.phase === "Follicular"
+              ? "#f6fff6"
+              : d.phase === "Ovulatory"
+              ? "#fffaf0"
+              : d.phase === "Luteal"
+              ? "#f7fbff"
+              : "#fff6f6";
 
           return (
-            <div
+            <Link
               key={d.date.toISOString()}
+              href={`/navigate?age=${encodeURIComponent(age)}&day1=${encodeURIComponent(day1Str)}&date=${encodeURIComponent(
+                d.date.toISOString().slice(0, 10)
+              )}`}
               style={{
+                textDecoration: "none",
+                color: "inherit",
                 border: "1px solid #e6e6e6",
                 borderRadius: 12,
                 padding: 10,
                 background: bg,
                 minHeight: 86,
+                display: "block",
               }}
               title={`${fmtShort(d.date)} — Day ${d.dayIndex} — ${d.phase}`}
             >
@@ -131,7 +143,7 @@ export default function CalendarPage() {
               </div>
               <div style={{ marginTop: 6, fontWeight: 700, fontSize: 12 }}>{d.phase}</div>
               <div style={{ marginTop: 6, fontSize: 12, color: "#444", lineHeight: 1.25 }}>{d.summary}</div>
-            </div>
+            </Link>
           );
         })}
       </div>
