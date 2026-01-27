@@ -10,11 +10,18 @@ export default function HomePage() {
 
   function go() {
     if (!age || !day1) return;
-    router.push(`/navigate?age=${age}&day1=${day1}`);
+    router.push(`/calendar?age=${age}&day1=${day1}`);
   }
 
   return (
-    <main style={{ maxWidth: 420, margin: "60px auto", padding: 20, fontFamily: "system-ui" }}>
+    <main
+      style={{
+        maxWidth: 420,
+        margin: "60px auto",
+        padding: 20,
+        fontFamily: "system-ui",
+      }}
+    >
       <h1>Cycle Navigator</h1>
 
       <p style={{ fontSize: 14, color: "#444" }}>
