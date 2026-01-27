@@ -86,7 +86,7 @@ export default function CalendarPage() {
           href={`/navigate?age=${encodeURIComponent(age)}&day1=${encodeURIComponent(day1Str)}`}
           style={{ fontSize: 14 }}
         >
-          Back to Today/Tomorrow
+          Today / Tomorrow
         </Link>
       </div>
 
