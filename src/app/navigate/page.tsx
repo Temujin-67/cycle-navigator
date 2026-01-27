@@ -16,6 +16,8 @@ type DayInfo = {
   stress: string;
   communication: string;
   partnerFocus: string;
+  helps: string;
+  avoid: string;
 };
 
 const DEFAULTS = {
@@ -32,8 +34,12 @@ function addDays(d: Date, n: number) {
   return x;
 }
 
+// DD MM YYYY
 function fmt(d: Date) {
-  return d.toLocaleDateString(undefined, { weekday: "long", day: "2-digit", month: "short", year: "numeric" });
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  return `${dd} ${mm} ${yyyy}`;
 }
 
 function clamp(n: number, a: number, b: number) {
@@ -75,6 +81,8 @@ function copy(phase: Phase, age: number) {
       stress: `Lower tolerance for friction, often due to fatigue/discomfort. Sensitivity is ${t.sensitivity}.`,
       communication: "Gentle tone, simple questions, no pressure for decisions.",
       partnerFocus: "Support first: offer help, keep plans light, avoid surprise debates.",
+      helps: "Warmth, reassurance, practical help, low-pressure presence.",
+      avoid: "Pushing decisions, criticism, surprise plans.",
     };
   }
 
@@ -86,6 +94,8 @@ function copy(phase: Phase, age: number) {
       stress: "Resilience is often better; small issues feel less charged.",
       communication: "Direct, collaborative conversation usually lands well.",
       partnerFocus: "Good window for planning, logistics, and normal problem-solving talks.",
+      helps: "Planning, shared tasks, constructive conversations.",
+      avoid: "Overcontrolling or dismissing ideas.",
     };
   }
 
@@ -97,6 +107,8 @@ function copy(phase: Phase, age: number) {
       stress: "Tolerance is often strong; repair after friction can be faster.",
       communication: "Warm, direct, playful communication usually works best.",
       partnerFocus: "Prioritise bonding: dates, affection, and positive attention tend to land well.",
+      helps: "Affection, attention, playfulness, shared experiences.",
+      avoid: "Neglect, emotional distance.",
     };
   }
 
@@ -108,6 +120,8 @@ function copy(phase: Phase, age: number) {
       stress: `Sensitivity often rises gradually as days progress. Sensitivity is ${t.sensitivity}.`,
       communication: "Clarity helps; avoid pressure and keep requests specific.",
       partnerFocus: "Keep things predictable and calm; reduce last-minute changes if possible.",
+      helps: "Predictability, clarity, calm reassurance.",
+      avoid: "Last-minute changes, vague expectations.",
     };
   }
 
@@ -119,6 +133,8 @@ function copy(phase: Phase, age: number) {
     stress: `High reactivity window: small inputs can feel big. Sensitivity is ${t.sensitivity}.`,
     communication: "Validate first, keep tone soft, avoid ‘logic battles’.",
     partnerFocus: "De-escalate: simplify plans, reassure, and postpone heavy topics where possible.",
+    helps: "Validation, space, emotional safety, fewer demands.",
+    avoid: "Debates, minimising feelings, problem-solving mode.",
   };
 }
 
@@ -138,11 +154,18 @@ function buildDay(day1: Date, age: number, offset: number): DayInfo {
   };
 }
 
+function startOfDay(d: Date) {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x;
+}
+
 export default function NavigatePage() {
   const sp = useSearchParams();
 
   const age = sp.get("age") || "";
   const day1Str = sp.get("day1") || "";
+  const dateStr = sp.get("date") || ""; // YYYY-MM-DD optional (from Calendar)
 
   const ageNum = Number(age || "0");
 
@@ -151,27 +174,36 @@ export default function NavigatePage() {
     return isNaN(d.getTime()) ? null : d;
   }, [day1Str]);
 
-  const today = useMemo(() => new Date(), []);
-  const offsetToday = useMemo(() => {
+  const selectedDate = useMemo(() => {
+    if (!dateStr) return null;
+    const d = new Date(dateStr + "T12:00:00");
+    return isNaN(d.getTime()) ? null : d;
+  }, [dateStr]);
+
+  const baseDate = useMemo(() => {
+    const t = new Date();
+    t.setHours(12, 0, 0, 0);
+    return selectedDate ?? t;
+  }, [selectedDate]);
+
+  const offsetBase = useMemo(() => {
     if (!day1) return 0;
-    const a = new Date(today);
-    a.setHours(0, 0, 0, 0);
-    const b = new Date(day1);
-    b.setHours(0, 0, 0, 0);
-    const diff = a.getTime() - b.getTime();
+    const a = startOfDay(baseDate).getTime();
+    const b = startOfDay(day1).getTime();
+    const diff = a - b;
     return Math.floor(diff / (1000 * 60 * 60 * 24));
-  }, [day1, today]);
+  }, [day1, baseDate]);
 
   const todayInfo = useMemo(() => {
     if (!day1 || !ageNum) return null;
-    return buildDay(day1, ageNum, offsetToday < 0 ? 0 : offsetToday);
-  }, [day1, ageNum, offsetToday]);
+    return buildDay(day1, ageNum, offsetBase < 0 ? 0 : offsetBase);
+  }, [day1, ageNum, offsetBase]);
 
   const tomorrowInfo = useMemo(() => {
     if (!day1 || !ageNum) return null;
-    const base = offsetToday < 0 ? 0 : offsetToday;
+    const base = offsetBase < 0 ? 0 : offsetBase;
     return buildDay(day1, ageNum, base + 1);
-  }, [day1, ageNum, offsetToday]);
+  }, [day1, ageNum, offsetBase]);
 
   if (!age || !day1) {
     return (
@@ -182,10 +214,13 @@ export default function NavigatePage() {
     );
   }
 
+  const primaryLabel = selectedDate ? "SELECTED DAY" : "TODAY";
+  const secondaryLabel = selectedDate ? "NEXT DAY" : "TOMORROW";
+
   return (
     <main style={{ maxWidth: 720, margin: "40px auto", padding: 20, fontFamily: "system-ui" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
-        <h1 style={{ marginTop: 0 }}>Today / Tomorrow</h1>
+        <h1 style={{ marginTop: 0 }}>Day View</h1>
         <Link
           href={`/calendar?age=${encodeURIComponent(age)}&day1=${encodeURIComponent(day1Str)}`}
           style={{ fontSize: 14 }}
@@ -200,7 +235,7 @@ export default function NavigatePage() {
 
       <section style={{ border: "1px solid #e6e6e6", borderRadius: 12, padding: 14, background: "#fff" }}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-          <strong>TODAY</strong>
+          <strong>{primaryLabel}</strong>
           <span style={{ color: "#666", fontSize: 13 }}>{todayInfo ? fmt(todayInfo.date) : ""}</span>
         </div>
 
@@ -211,20 +246,46 @@ export default function NavigatePage() {
             </div>
 
             <div style={{ marginTop: 10, display: "grid", gap: 8, fontSize: 14, lineHeight: 1.35 }}>
-              <div><b>Mood:</b> {todayInfo.mood}</div>
-              <div><b>Libido:</b> {todayInfo.libido}</div>
-              <div><b>Energy:</b> {todayInfo.energy}</div>
-              <div><b>Stress response:</b> {todayInfo.stress}</div>
-              <div><b>Communication:</b> {todayInfo.communication}</div>
-              <div><b>Partner focus:</b> {todayInfo.partnerFocus}</div>
+              <div>
+                <b>Mood:</b> {todayInfo.mood}
+              </div>
+              <div>
+                <b>Libido:</b> {todayInfo.libido}
+              </div>
+              <div>
+                <b>Energy:</b> {todayInfo.energy}
+              </div>
+              <div>
+                <b>Stress response:</b> {todayInfo.stress}
+              </div>
+              <div>
+                <b>Communication:</b> {todayInfo.communication}
+              </div>
+              <div>
+                <b>Partner focus:</b> {todayInfo.partnerFocus}
+              </div>
+              <div>
+                <b>What helps:</b> {todayInfo.helps}
+              </div>
+              <div>
+                <b>What to avoid:</b> {todayInfo.avoid}
+              </div>
             </div>
           </>
         )}
       </section>
 
-      <section style={{ marginTop: 14, border: "1px solid #e6e6e6", borderRadius: 12, padding: 14, background: "#fff" }}>
+      <section
+        style={{
+          marginTop: 14,
+          border: "1px solid #e6e6e6",
+          borderRadius: 12,
+          padding: 14,
+          background: "#fff",
+        }}
+      >
         <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-          <strong>TOMORROW</strong>
+          <strong>{secondaryLabel}</strong>
           <span style={{ color: "#666", fontSize: 13 }}>{tomorrowInfo ? fmt(tomorrowInfo.date) : ""}</span>
         </div>
 
@@ -235,12 +296,30 @@ export default function NavigatePage() {
             </div>
 
             <div style={{ marginTop: 10, display: "grid", gap: 8, fontSize: 14, lineHeight: 1.35 }}>
-              <div><b>Mood:</b> {tomorrowInfo.mood}</div>
-              <div><b>Libido:</b> {tomorrowInfo.libido}</div>
-              <div><b>Energy:</b> {tomorrowInfo.energy}</div>
-              <div><b>Stress response:</b> {tomorrowInfo.stress}</div>
-              <div><b>Communication:</b> {tomorrowInfo.communication}</div>
-              <div><b>Partner focus:</b> {tomorrowInfo.partnerFocus}</div>
+              <div>
+                <b>Mood:</b> {tomorrowInfo.mood}
+              </div>
+              <div>
+                <b>Libido:</b> {tomorrowInfo.libido}
+              </div>
+              <div>
+                <b>Energy:</b> {tomorrowInfo.energy}
+              </div>
+              <div>
+                <b>Stress response:</b> {tomorrowInfo.stress}
+              </div>
+              <div>
+                <b>Communication:</b> {tomorrowInfo.communication}
+              </div>
+              <div>
+                <b>Partner focus:</b> {tomorrowInfo.partnerFocus}
+              </div>
+              <div>
+                <b>What helps:</b> {tomorrowInfo.helps}
+              </div>
+              <div>
+                <b>What to avoid:</b> {tomorrowInfo.avoid}
+              </div>
             </div>
           </>
         )}
