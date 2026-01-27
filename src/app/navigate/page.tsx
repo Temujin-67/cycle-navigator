@@ -8,7 +8,7 @@ type Phase = "Menstrual" | "Follicular" | "Ovulatory" | "Luteal" | "PMS";
 
 type DayInfo = {
   date: Date;
-  dayIndex: number; // 1..28
+  dayIndex: number; // 1..cycleLength
   phase: Phase;
   mood: string;
   libido: string;
@@ -20,12 +20,31 @@ type DayInfo = {
   avoid: string;
 };
 
-const DEFAULTS = {
-  cycleLength: 28,
-  bleedDays: 5,
-  pmsDays: 5,
-  ovulationWindow: 3, // mid-cycle ±1
+type Settings = {
+  cycleLength: number; // 21..40
+  bleedDays: number;
+  pmsDays: number;
+  ovulationWindow: number;
 };
+
+function clamp(n: number, a: number, b: number) {
+  return Math.max(a, Math.min(b, n));
+}
+
+function parseIntSafe(v: string | null, fallback: number) {
+  const n = Number(v);
+  return Number.isFinite(n) ? Math.trunc(n) : fallback;
+}
+
+function getSettings(sp: ReturnType<typeof useSearchParams>): Settings {
+  const cl = clamp(parseIntSafe(sp.get("cl"), 28), 21, 40);
+  return {
+    cycleLength: cl,
+    bleedDays: 5,
+    pmsDays: 5,
+    ovulationWindow: 3,
+  };
+}
 
 function addDays(d: Date, n: number) {
   const x = new Date(d);
@@ -42,10 +61,6 @@ function fmt(d: Date) {
   return `${dd} ${mm} ${yyyy}`;
 }
 
-function clamp(n: number, a: number, b: number) {
-  return Math.max(a, Math.min(b, n));
-}
-
 function ageTone(age: number) {
   const a = clamp(age, 18, 55);
   if (a <= 30) return { variability: "moderate", sensitivity: "moderate" };
@@ -53,11 +68,11 @@ function ageTone(age: number) {
   return { variability: "higher", sensitivity: "higher" };
 }
 
-function phaseForDay(dayIndex: number): Phase {
-  const { cycleLength, bleedDays, pmsDays, ovulationWindow } = DEFAULTS;
+function phaseForDay(dayIndex: number, s: Settings): Phase {
+  const { cycleLength, bleedDays, pmsDays, ovulationWindow } = s;
 
-  const ovCenter = Math.round(cycleLength / 2); // ~14
-  const ovHalf = Math.floor(ovulationWindow / 2); // 1
+  const ovCenter = Math.round(cycleLength / 2);
+  const ovHalf = Math.floor(ovulationWindow / 2);
   const ovStart = ovCenter - ovHalf;
   const ovEnd = ovCenter + ovHalf;
 
@@ -125,7 +140,6 @@ function copy(phase: Phase, age: number) {
     };
   }
 
-  // PMS
   return {
     mood: `More emotionally sensitive; irritation or sadness can surface faster. Variability is ${t.variability}.`,
     libido: "Often lower or inconsistent; closeness may need more safety and patience.",
@@ -138,12 +152,10 @@ function copy(phase: Phase, age: number) {
   };
 }
 
-function buildDay(day1: Date, age: number, offset: number): DayInfo {
-  const { cycleLength } = DEFAULTS;
-
+function buildDay(day1: Date, age: number, offset: number, s: Settings): DayInfo {
   const date = addDays(day1, offset);
-  const dayIndex = ((offset % cycleLength) + 1) as number;
-  const phase = phaseForDay(dayIndex);
+  const dayIndex = ((offset % s.cycleLength) + 1) as number;
+  const phase = phaseForDay(dayIndex, s);
   const c = copy(phase, age);
 
   return {
@@ -165,7 +177,9 @@ export default function NavigatePage() {
 
   const age = sp.get("age") || "";
   const day1Str = sp.get("day1") || "";
-  const dateStr = sp.get("date") || ""; // YYYY-MM-DD optional (from Calendar)
+  const dateStr = sp.get("date") || ""; // YYYY-MM-DD optional
+
+  const s = useMemo(() => getSettings(sp), [sp]);
 
   const ageNum = Number(age || "0");
 
@@ -196,14 +210,14 @@ export default function NavigatePage() {
 
   const todayInfo = useMemo(() => {
     if (!day1 || !ageNum) return null;
-    return buildDay(day1, ageNum, offsetBase < 0 ? 0 : offsetBase);
-  }, [day1, ageNum, offsetBase]);
+    return buildDay(day1, ageNum, offsetBase < 0 ? 0 : offsetBase, s);
+  }, [day1, ageNum, offsetBase, s]);
 
   const tomorrowInfo = useMemo(() => {
     if (!day1 || !ageNum) return null;
     const base = offsetBase < 0 ? 0 : offsetBase;
-    return buildDay(day1, ageNum, base + 1);
-  }, [day1, ageNum, offsetBase]);
+    return buildDay(day1, ageNum, base + 1, s);
+  }, [day1, ageNum, offsetBase, s]);
 
   if (!age || !day1) {
     return (
@@ -214,6 +228,10 @@ export default function NavigatePage() {
     );
   }
 
+  const qp = `age=${encodeURIComponent(age)}&day1=${encodeURIComponent(day1Str)}&cl=${encodeURIComponent(
+    String(s.cycleLength)
+  )}`;
+
   const primaryLabel = selectedDate ? "SELECTED DAY" : "TODAY";
   const secondaryLabel = selectedDate ? "NEXT DAY" : "TOMORROW";
 
@@ -221,10 +239,7 @@ export default function NavigatePage() {
     <main style={{ maxWidth: 720, margin: "40px auto", padding: 20, fontFamily: "system-ui" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
         <h1 style={{ marginTop: 0 }}>Day View</h1>
-        <Link
-          href={`/calendar?age=${encodeURIComponent(age)}&day1=${encodeURIComponent(day1Str)}`}
-          style={{ fontSize: 14 }}
-        >
+        <Link href={`/calendar?${qp}`} style={{ fontSize: 14 }}>
           Monthly view
         </Link>
       </div>
@@ -246,44 +261,20 @@ export default function NavigatePage() {
             </div>
 
             <div style={{ marginTop: 10, display: "grid", gap: 8, fontSize: 14, lineHeight: 1.35 }}>
-              <div>
-                <b>Mood:</b> {todayInfo.mood}
-              </div>
-              <div>
-                <b>Libido:</b> {todayInfo.libido}
-              </div>
-              <div>
-                <b>Energy:</b> {todayInfo.energy}
-              </div>
-              <div>
-                <b>Stress response:</b> {todayInfo.stress}
-              </div>
-              <div>
-                <b>Communication:</b> {todayInfo.communication}
-              </div>
-              <div>
-                <b>Partner focus:</b> {todayInfo.partnerFocus}
-              </div>
-              <div>
-                <b>What helps:</b> {todayInfo.helps}
-              </div>
-              <div>
-                <b>What to avoid:</b> {todayInfo.avoid}
-              </div>
+              <div><b>Mood:</b> {todayInfo.mood}</div>
+              <div><b>Libido:</b> {todayInfo.libido}</div>
+              <div><b>Energy:</b> {todayInfo.energy}</div>
+              <div><b>Stress response:</b> {todayInfo.stress}</div>
+              <div><b>Communication:</b> {todayInfo.communication}</div>
+              <div><b>Partner focus:</b> {todayInfo.partnerFocus}</div>
+              <div><b>What helps:</b> {todayInfo.helps}</div>
+              <div><b>What to avoid:</b> {todayInfo.avoid}</div>
             </div>
           </>
         )}
       </section>
 
-      <section
-        style={{
-          marginTop: 14,
-          border: "1px solid #e6e6e6",
-          borderRadius: 12,
-          padding: 14,
-          background: "#fff",
-        }}
-      >
+      <section style={{ marginTop: 14, border: "1px solid #e6e6e6", borderRadius: 12, padding: 14, background: "#fff" }}>
         <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
           <strong>{secondaryLabel}</strong>
           <span style={{ color: "#666", fontSize: 13 }}>{tomorrowInfo ? fmt(tomorrowInfo.date) : ""}</span>
@@ -296,30 +287,14 @@ export default function NavigatePage() {
             </div>
 
             <div style={{ marginTop: 10, display: "grid", gap: 8, fontSize: 14, lineHeight: 1.35 }}>
-              <div>
-                <b>Mood:</b> {tomorrowInfo.mood}
-              </div>
-              <div>
-                <b>Libido:</b> {tomorrowInfo.libido}
-              </div>
-              <div>
-                <b>Energy:</b> {tomorrowInfo.energy}
-              </div>
-              <div>
-                <b>Stress response:</b> {tomorrowInfo.stress}
-              </div>
-              <div>
-                <b>Communication:</b> {tomorrowInfo.communication}
-              </div>
-              <div>
-                <b>Partner focus:</b> {tomorrowInfo.partnerFocus}
-              </div>
-              <div>
-                <b>What helps:</b> {tomorrowInfo.helps}
-              </div>
-              <div>
-                <b>What to avoid:</b> {tomorrowInfo.avoid}
-              </div>
+              <div><b>Mood:</b> {tomorrowInfo.mood}</div>
+              <div><b>Libido:</b> {tomorrowInfo.libido}</div>
+              <div><b>Energy:</b> {tomorrowInfo.energy}</div>
+              <div><b>Stress response:</b> {tomorrowInfo.stress}</div>
+              <div><b>Communication:</b> {tomorrowInfo.communication}</div>
+              <div><b>Partner focus:</b> {tomorrowInfo.partnerFocus}</div>
+              <div><b>What helps:</b> {tomorrowInfo.helps}</div>
+              <div><b>What to avoid:</b> {tomorrowInfo.avoid}</div>
             </div>
           </>
         )}
