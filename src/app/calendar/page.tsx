@@ -74,6 +74,9 @@ export default function CalendarPage() {
       <main style={{ maxWidth: 720, margin: "40px auto", padding: 20, fontFamily: "system-ui" }}>
         <h1 style={{ marginTop: 0 }}>Monthly View</h1>
         <p style={{ color: "#444" }}>Missing inputs. Go back and enter age + Day 1.</p>
+        <div style={{ marginTop: 10 }}>
+          <Link href="/" style={{ fontSize: 14 }}>Home</Link>
+        </div>
       </main>
     );
   }
@@ -82,12 +85,19 @@ export default function CalendarPage() {
     <main style={{ maxWidth: 900, margin: "40px auto", padding: 20, fontFamily: "system-ui" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
         <h1 style={{ marginTop: 0 }}>Monthly View</h1>
-        <Link
-          href={`/navigate?age=${encodeURIComponent(age)}&day1=${encodeURIComponent(day1Str)}`}
-          style={{ fontSize: 14 }}
-        >
-          Today / Tomorrow
-        </Link>
+
+        <div style={{ display: "flex", gap: 14 }}>
+          <Link
+            href={`/navigate?age=${encodeURIComponent(age)}&day1=${encodeURIComponent(day1Str)}`}
+            style={{ fontSize: 14 }}
+          >
+            Today / Tomorrow
+          </Link>
+
+          <Link href="/" style={{ fontSize: 14 }}>
+            Home
+          </Link>
+        </div>
       </div>
 
       <div style={{ fontSize: 13, color: "#444", marginBottom: 14 }}>
