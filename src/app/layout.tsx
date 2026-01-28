@@ -29,7 +29,7 @@ export default function RootLayout({
         <meta name="theme-color" content="#16A34A" />
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){var t=document.documentElement.getAttribute("data-theme")||(typeof localStorage!="undefined"&&localStorage.getItem("cf_theme"))||"";if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t);})();`,
+            __html: `(function(){var t=document.documentElement.getAttribute("data-theme")||(typeof localStorage!=="undefined"&&localStorage.getItem("cf_theme"))||"";if(t==="dark"||t==="light"){document.documentElement.setAttribute("data-theme",t);}else{var d=typeof window!=="undefined"&&window.matchMedia&&window.matchMedia("(prefers-color-scheme: dark)").matches;document.documentElement.setAttribute("data-theme",d?"dark":"light");}})();`,
           }}
         />
       </head>

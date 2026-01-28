@@ -353,7 +353,8 @@ function PhaseChip({ phase }: { phase: Phase }) {
         padding: "7px 12px",
         borderRadius: 999,
         border: `1px solid ${s.border}`,
-        background: "#fff",
+        background: "var(--background)",
+        color: "var(--foreground)",
         fontSize: 12,
         fontWeight: 900,
       }}
@@ -407,8 +408,8 @@ function DayCard({ d }: { d: DayInfo }) {
     <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
       <div style={{ width: 26, textAlign: "center", fontSize: 16 }}>{emoji}</div>
       <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: 0.2, color: "#111" }}>{label}</div>
-        <div style={{ fontSize: 15, lineHeight: 1.35, color: "#111", marginTop: 2 }}>{value}</div>
+        <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: 0.2, color: "var(--foreground)" }}>{label}</div>
+        <div style={{ fontSize: 15, lineHeight: 1.35, color: "var(--foreground)", marginTop: 2 }}>{value}</div>
       </div>
     </div>
   );
@@ -425,9 +426,9 @@ function DayCard({ d }: { d: DayInfo }) {
     >
       <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "baseline" }}>
         <div style={{ fontWeight: 1000 as any, fontSize: 18 }}>
-          {fmt(d.date)} <span style={{ color: "#666", fontSize: 13 }}>· Day {d.dayIndex}</span>
+          {fmt(d.date)} <span style={{ color: "var(--text-secondary)", fontSize: 13 }}>· Day {d.dayIndex}</span>
         </div>
-        <div style={{ color: "#666", fontSize: 12 }}>Swipe ◀ ▶</div>
+        <div style={{ color: "var(--text-secondary)", fontSize: 12 }}>Swipe ◀ ▶</div>
       </div>
 
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 12 }}>
@@ -445,7 +446,7 @@ function DayCard({ d }: { d: DayInfo }) {
         {row("🤰", "Pregnancy odds", d.fertility)}
       </div>
 
-      <div style={{ marginTop: 14, fontSize: 12, color: "#444", lineHeight: 1.35 }}>
+      <div style={{ marginTop: 14, fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.35 }}>
         <strong><Link href="/disclaimer" style={{ color: "inherit", textDecoration: "underline" }}>Disclaimer</Link>:</strong> For informational use only. Not for contraception or medical decisions. Pattern-based. Individual responses differ. Not medical advice. Consult a healthcare provider for health decisions.
       </div>
     </section>
@@ -462,10 +463,20 @@ function NavigateInner() {
   const cycleLength = Number(sp.get("cl") || DEFAULTS.cycleLength);
 
   const [dismissBleedPrompt, setDismissBleedPrompt] = useState(false);
-  const [dismissNewPeriodPrompt, setDismissNewPeriodPrompt] = useState(false);
+  const [lastNewPeriodDismissedDate, setLastNewPeriodDismissedDate] = useState<string | null>(null);
 
   const day1 = useMemo(() => new Date(day1Str + "T12:00:00"), [day1Str]);
   const today = useMemo(() => new Date(), []);
+
+  // When cycle (day1) changes, reset view and prompt state so new cycle shows Day 1 and prompts work again
+  React.useEffect(() => {
+    setDelta(0);
+    setDismissBleedPrompt(false);
+    setLastNewPeriodDismissedDate(null);
+    try {
+      if (typeof window !== "undefined") window.localStorage.removeItem("cf_new_period_dismissed_date");
+    } catch {}
+  }, [day1Str]);
 
   const baseOffset = useMemo(() => {
     const a = startOfDay(today).getTime();
@@ -491,8 +502,11 @@ function NavigateInner() {
 
   // Ask "period over?" on first day after current assumed bleed (Day 6 if default 5, then 7, 8...)
   const showBleedQuestion = !dismissBleedPrompt && current.dayIndex === bleedOverride + 1;
-  // Ask "new period started?" when we're at or past the end of the cycle so we don't loop forever in PMS
-  const showNewPeriodQuestion = !dismissNewPeriodPrompt && current.dayIndex >= cycleLength;
+  // Ask "new period started?" when at/past end of cycle; repeat every day until they say Yes (dismiss only for today)
+  const todayDateStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}-${String(new Date().getDate()).padStart(2, "0")}`;
+  const showNewPeriodQuestion =
+    current.dayIndex >= cycleLength &&
+    (lastNewPeriodDismissedDate === null || lastNewPeriodDismissedDate !== todayDateStr);
 
   const qpBase = `age=${encodeURIComponent(age)}&day1=${encodeURIComponent(day1Str)}&cl=${encodeURIComponent(String(cycleLength))}`;
 
@@ -505,6 +519,8 @@ function NavigateInner() {
     router.push(`/navigate?${qpBase}&bd=${encodeURIComponent(String(day))}`);
     router.refresh();
   }
+
+  const [newCycleConfirmation, setNewCycleConfirmation] = useState(false);
 
   function startNewCycle() {
     const d = new Date();
@@ -519,7 +535,15 @@ function NavigateInner() {
         setCycleHistory(next);
       }
     } catch (_) {}
-    router.push(
+    setDelta(0);
+    setDismissBleedPrompt(false);
+    setLastNewPeriodDismissedDate(null);
+    try {
+      if (typeof window !== "undefined") window.localStorage.removeItem("cf_new_period_dismissed_date");
+    } catch {}
+    setNewCycleConfirmation(true);
+    setTimeout(() => setNewCycleConfirmation(false), 4000);
+    router.replace(
       `/navigate?age=${encodeURIComponent(age)}&day1=${encodeURIComponent(newDay1Str)}&bd=5&cl=${learnedCl}`
     );
     router.refresh();
@@ -533,6 +557,12 @@ function NavigateInner() {
     } catch {
       setCycleHistory([]);
     }
+  }, []);
+  React.useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem("cf_new_period_dismissed_date");
+      if (stored) setLastNewPeriodDismissedDate(stored);
+    } catch {}
   }, []);
 
   // --- Swipe handling (no libs) ---
@@ -581,10 +611,12 @@ function NavigateInner() {
 
   const onTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
+    e.preventDefault();
   };
 
   const onTouchMove = (e: React.TouchEvent) => {
     setDragPx(e.touches[0].clientX - touchStartX.current);
+    e.preventDefault();
   };
 
   const onTouchEnd = (e: React.TouchEvent) => {
@@ -608,7 +640,8 @@ function NavigateInner() {
         margin: "18px auto",
         padding: 14,
         fontFamily: "system-ui",
-        color: "#111",
+        color: "var(--foreground)",
+        background: "var(--background)",
       }}
     >
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
@@ -631,6 +664,24 @@ function NavigateInner() {
         </div>
       </div>
 
+      {newCycleConfirmation && (
+        <div
+          role="alert"
+          style={{
+            marginTop: 12,
+            padding: "10px 14px",
+            borderRadius: 12,
+            background: "var(--button-primary)",
+            color: "var(--button-primary-color)",
+            fontSize: 14,
+            fontWeight: 700,
+            textAlign: "center",
+          }}
+        >
+          New cycle started — you&apos;re on Day 1
+        </div>
+      )}
+
       {/* Best day / Worst day for this cycle */}
       <section style={{ marginTop: 14 }}>
         <div
@@ -649,7 +700,7 @@ function NavigateInner() {
             }}
           >
             <div style={{ fontSize: 11, fontWeight: 800, color: "#0B6B45", marginBottom: 4 }}>Best day for conversations</div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "#111" }}>{bestWorstRanges(bleedOverride, cycleLength).bestDays}</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{bestWorstRanges(bleedOverride, cycleLength).bestDays}</div>
             <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Conversations, planning, hanging out.</div>
           </div>
           <div
@@ -661,7 +712,7 @@ function NavigateInner() {
             }}
           >
             <div style={{ fontSize: 11, fontWeight: 800, color: "#7F1D1D", marginBottom: 4 }}>Worst day for</div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "#111" }}>{bestWorstRanges(bleedOverride, cycleLength).worstDays}</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{bestWorstRanges(bleedOverride, cycleLength).worstDays}</div>
             <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Big talks, pushing decisions, arguments.</div>
           </div>
         </div>
@@ -682,7 +733,7 @@ function NavigateInner() {
             }}
           >
             <div style={{ fontSize: 11, fontWeight: 800, color: "#7A4B00", marginBottom: 4 }}>Best day for libido</div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "#111" }}>{bestWorstRanges(bleedOverride, cycleLength).bestLibidoDays}</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{bestWorstRanges(bleedOverride, cycleLength).bestLibidoDays}</div>
             <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Interest highest. Signals clearer.</div>
           </div>
           <div
@@ -694,7 +745,7 @@ function NavigateInner() {
             }}
           >
             <div style={{ fontSize: 11, fontWeight: 800, color: "#7F1D1D", marginBottom: 4 }}>Worst day for libido</div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "#111" }}>{bestWorstRanges(bleedOverride, cycleLength).worstLibidoDays}</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{bestWorstRanges(bleedOverride, cycleLength).worstLibidoDays}</div>
             <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Low interest. Leave it alone.</div>
           </div>
           <div
@@ -706,13 +757,13 @@ function NavigateInner() {
             }}
           >
             <div style={{ fontSize: 11, fontWeight: 800, color: "#0B4A84", marginBottom: 4 }}>Best day for pregnancy</div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "#111" }}>{bestWorstRanges(bleedOverride, cycleLength).bestPregnancyDays}</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{bestWorstRanges(bleedOverride, cycleLength).bestPregnancyDays}</div>
             <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Fertile window. Highest odds.</div>
           </div>
         </div>
         <div style={{ marginTop: 10, padding: 12, borderRadius: 12, background: "#F1FFF5", border: "1px solid #16A34A" }}>
           <div style={{ fontSize: 11, fontWeight: 800, color: "#0B6B45", marginBottom: 4 }}>Best day to have a difficult conversation</div>
-          <div style={{ fontSize: 12, fontWeight: 700, color: "#111" }}>{bestWorstRanges(bleedOverride, cycleLength).bestDays} (Follicular phase)</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{bestWorstRanges(bleedOverride, cycleLength).bestDays} (Follicular phase)</div>
         </div>
         {cycleHistory.length > 0 && (
           <div style={{ marginTop: 10, fontSize: 11, color: "var(--text-secondary)" }}>
@@ -727,13 +778,13 @@ function NavigateInner() {
             marginTop: 12,
             borderRadius: 16,
             padding: 14,
-            border: "1px solid #ddd",
-            background: "#fff",
+            border: "1px solid var(--input-border)",
+            background: "var(--background)",
             boxShadow: "0 1px 0 rgba(0,0,0,0.05)",
           }}
         >
-          <div style={{ fontWeight: 1000 as any }}>Day {current.dayIndex}: period over yet?</div>
-          <div style={{ marginTop: 6, fontSize: 13, color: "#444" }}>
+          <div style={{ fontWeight: 1000 as any, color: "var(--foreground)" }}>Day {current.dayIndex}: period over yet?</div>
+          <div style={{ marginTop: 6, fontSize: 13, color: "var(--text-secondary)" }}>
             Can be 5–7 days. Some longer. We need to know so the app gets the phase right.
           </div>
 
@@ -741,9 +792,9 @@ function NavigateInner() {
             <button
               onClick={extendBleedToCurrentDay}
               style={{
-                border: "1px solid #111",
-                background: "#111",
-                color: "#fff",
+                border: "1px solid var(--button-primary)",
+                background: "var(--button-primary)",
+                color: "var(--button-primary-color)",
                 padding: "10px 12px",
                 borderRadius: 12,
                 fontWeight: 1000 as any,
@@ -756,9 +807,9 @@ function NavigateInner() {
             <button
               onClick={() => setDismissBleedPrompt(true)}
               style={{
-                border: "1px solid #ddd",
-                background: "#fff",
-                color: "#111",
+                border: "1px solid var(--input-border)",
+                background: "var(--background)",
+                color: "var(--foreground)",
                 padding: "10px 12px",
                 borderRadius: 12,
                 fontWeight: 1000 as any,
@@ -770,7 +821,7 @@ function NavigateInner() {
           </div>
 
           {current.dayIndex > 2 && (
-            <div style={{ marginTop: 12, fontSize: 12, color: "#444" }}>
+            <div style={{ marginTop: 12, fontSize: 12, color: "var(--text-secondary)" }}>
               She said it ended earlier — on day{" "}
               <select
                 value={bleedOverride}
@@ -778,7 +829,7 @@ function NavigateInner() {
                 style={{
                   padding: "6px 8px",
                   borderRadius: 8,
-                  border: "1px solid #ddd",
+                  border: "1px solid var(--input-border)",
                   fontWeight: 700,
                   cursor: "pointer",
                 }}
@@ -805,17 +856,17 @@ function NavigateInner() {
             boxShadow: "0 1px 0 rgba(0,0,0,0.05)",
           }}
         >
-          <div style={{ fontWeight: 1000 as any }}>Day {current.dayIndex}: new period started?</div>
-          <div style={{ marginTop: 6, fontSize: 13, color: "#444" }}>
+          <div style={{ fontWeight: 1000 as any, color: "var(--foreground)" }}>Day {current.dayIndex}: new period started?</div>
+          <div style={{ marginTop: 6, fontSize: 13, color: "var(--text-secondary)" }}>
             Start a new cycle so the app resets and we don&apos;t keep showing PMS. We&apos;ll use this cycle length ({current.dayIndex} days) for the next one.
           </div>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
             <button
               onClick={startNewCycle}
               style={{
-                border: "1px solid #16A34A",
-                background: "#16A34A",
-                color: "#fff",
+                border: "1px solid var(--button-primary)",
+                background: "var(--button-primary)",
+                color: "var(--button-primary-color)",
                 padding: "10px 12px",
                 borderRadius: 12,
                 fontWeight: 1000 as any,
@@ -825,11 +876,16 @@ function NavigateInner() {
               Yes, new cycle
             </button>
             <button
-              onClick={() => setDismissNewPeriodPrompt(true)}
+              onClick={() => {
+                setLastNewPeriodDismissedDate(todayDateStr);
+                try {
+                  if (typeof window !== "undefined") window.localStorage.setItem("cf_new_period_dismissed_date", todayDateStr);
+                } catch {}
+              }}
               style={{
-                border: "1px solid #ddd",
-                background: "#fff",
-                color: "#111",
+                border: "1px solid var(--input-border)",
+                background: "var(--background)",
+                color: "var(--foreground)",
                 padding: "10px 12px",
                 borderRadius: 12,
                 fontWeight: 1000 as any,
@@ -866,8 +922,9 @@ function NavigateInner() {
             onClick={() => setDelta((v) => Math.max(v - 1, -baseOffset))}
             style={{
               flex: 1,
-              border: "1px solid #ddd",
-              background: "#fff",
+              border: "1px solid var(--input-border)",
+              background: "var(--background)",
+              color: "var(--foreground)",
               padding: "10px 12px",
               borderRadius: 12,
               fontWeight: 1000 as any,
@@ -880,9 +937,9 @@ function NavigateInner() {
             onClick={() => setDelta((v) => v + 1)}
             style={{
               flex: 1,
-              border: "1px solid #111",
-              background: "#111",
-              color: "#fff",
+              border: "1px solid var(--button-primary)",
+              background: "var(--button-primary)",
+              color: "var(--button-primary-color)",
               padding: "10px 12px",
               borderRadius: 12,
               fontWeight: 1000 as any,
