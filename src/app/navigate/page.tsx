@@ -3,31 +3,36 @@
 import { Suspense, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
+/* ================= TYPES ================= */
+
 type Phase = "Menstrual" | "Follicular" | "Ovulatory" | "Luteal" | "PMS";
-type RiskLevel = "Low friction" | "Be mindful" | "High sensitivity";
+type RiskLevel = "Low" | "Medium" | "High";
 
 type DayInfo = {
   date: Date;
-  dayIndex: number; // 1.. (can go beyond 28 if cycle hasn't restarted)
+  dayIndex: number;
   phase: Phase;
   risk: RiskLevel;
-  riskNote: string;
   mood: string;
   libido: string;
   energy: string;
   stress: string;
   communication: string;
-  partnerFocus: string;
+  focus: string;
   helps: string;
   avoid: string;
 };
 
+/* ================= CONSTANTS ================= */
+
 const DEFAULTS = {
   cycleLength: 28,
-  bleedDays: 5,
+  bleedDays: 7, // theoretical
   pmsDays: 5,
   ovulationWindow: 3,
 };
+
+/* ================= HELPERS ================= */
 
 function addDays(d: Date, n: number) {
   const x = new Date(d);
@@ -36,56 +41,12 @@ function addDays(d: Date, n: number) {
   return x;
 }
 
-// DD MM YYYY
 function fmt(d: Date) {
-  const dd = String(d.getDate()).padStart(2, "0");
-  const mm = String(d.getMonth() + 1).padStart(2, "0");
-  const yyyy = d.getFullYear();
-  return `${dd} ${mm} ${yyyy}`;
-}
-
-function isoDate(d: Date) {
-  const x = new Date(d);
-  x.setHours(12, 0, 0, 0);
-  return x.toISOString().slice(0, 10);
-}
-
-function clamp(n: number, a: number, b: number) {
-  return Math.max(a, Math.min(b, n));
-}
-
-function ageTone(age: number) {
-  const a = clamp(age, 18, 55);
-  if (a <= 30) return { variability: "moderate", sensitivity: "moderate" };
-  if (a <= 40) return { variability: "moderate to higher", sensitivity: "moderate to higher" };
-  return { variability: "higher", sensitivity: "higher" };
-}
-
-function phaseForDay(dayIndex: number): Phase {
-  const { cycleLength, bleedDays, pmsDays, ovulationWindow } = DEFAULTS;
-
-  // If the cycle hasn't restarted and we're past the "standard" length,
-  // we keep the phase pinned to PMS as a safe, non-predictive extension.
-  const idx = Math.min(dayIndex, cycleLength);
-
-  const ovCenter = Math.round(cycleLength / 2);
-  const ovHalf = Math.floor(ovulationWindow / 2);
-  const ovStart = ovCenter - ovHalf;
-  const ovEnd = ovCenter + ovHalf;
-  const pmsStart = cycleLength - pmsDays + 1;
-
-  if (idx <= bleedDays) return "Menstrual";
-  if (idx >= ovStart && idx <= ovEnd) return "Ovulatory";
-  if (idx >= pmsStart) return "PMS";
-  if (idx > ovEnd && idx < pmsStart) return "Luteal";
-  return "Follicular";
-}
-
-function riskFor(phase: Phase): { risk: RiskLevel; riskNote: string } {
-  if (phase === "PMS") return { risk: "High sensitivity", riskNote: "Small stuff can blow up faster." };
-  if (phase === "Menstrual") return { risk: "Be mindful", riskNote: "Lower energy + lower patience is common." };
-  if (phase === "Luteal") return { risk: "Be mindful", riskNote: "More variability possible." };
-  return { risk: "Low friction", riskNote: "Often smoother days." };
+  return d.toLocaleDateString(undefined, {
+    weekday: "short",
+    day: "2-digit",
+    month: "short",
+  });
 }
 
 function startOfDay(d: Date) {
@@ -95,319 +56,344 @@ function startOfDay(d: Date) {
 }
 
 function pick(lines: string[], dayIndex: number, salt: number) {
-  const idx = (dayIndex * 3 + salt) % lines.length;
-  return lines[idx];
+  return lines[(dayIndex * 7 + salt) % lines.length];
 }
 
-function ovulationPeakDayIndex() {
-  return Math.round(DEFAULTS.cycleLength / 2); // 14
+/* ================= PHASE LOGIC ================= */
+
+function phaseForDay(dayIndex: number, bleedOverride?: number): Phase {
+  const bleed = bleedOverride ?? DEFAULTS.bleedDays;
+
+  const ovCenter = Math.round(DEFAULTS.cycleLength / 2);
+  const ovHalf = Math.floor(DEFAULTS.ovulationWindow / 2);
+  const ovStart = ovCenter - ovHalf;
+  const ovEnd = ovCenter + ovHalf;
+  const pmsStart = DEFAULTS.cycleLength - DEFAULTS.pmsDays + 1;
+
+  if (dayIndex <= bleed) return "Menstrual";
+  if (dayIndex >= ovStart && dayIndex <= ovEnd) return "Ovulatory";
+  if (dayIndex >= pmsStart) return "PMS";
+  if (dayIndex > ovEnd && dayIndex < pmsStart) return "Luteal";
+  return "Follicular";
 }
 
-function phaseMeta(phase: Phase) {
-  const meta: Record<Phase, { emoji: string; bg: string; border: string; pillBg: string; pillFg: string }> = {
-    Menstrual: { emoji: "🩸", bg: "linear-gradient(180deg, #FFF3F7 0%, #FFFFFF 100%)", border: "#FF4D7D", pillBg: "#FFE0EA", pillFg: "#9B1035" },
-    Follicular: { emoji: "🌱", bg: "linear-gradient(180deg, #F1FFF5 0%, #FFFFFF 100%)", border: "#19C37D", pillBg: "#DFFBEA", pillFg: "#0B6B45" },
-    Ovulatory: { emoji: "🔥", bg: "linear-gradient(180deg, #FFF7E6 0%, #FFFFFF 100%)", border: "#FFB020", pillBg: "#FFEBC2", pillFg: "#7A4B00" },
-    Luteal: { emoji: "🧠", bg: "linear-gradient(180deg, #EEF7FF 0%, #FFFFFF 100%)", border: "#1E88E5", pillBg: "#D8ECFF", pillFg: "#0B4A84" },
-    PMS: { emoji: "⚡", bg: "linear-gradient(180deg, #FFEFF1 0%, #FFFFFF 100%)", border: "#FF3B30", pillBg: "#FFD6D3", pillFg: "#7F1D1D" },
-  };
-  return meta[phase];
-}
+/* ================= COPY ================= */
 
-function riskBadge(risk: RiskLevel) {
-  if (risk === "Low friction") return { label: "GREEN", bg: "#E8FFF1", fg: "#0B6B45", border: "#19C37D", emoji: "🟢" };
-  if (risk === "Be mindful") return { label: "AMBER", bg: "#FFF6E5", fg: "#7A4B00", border: "#FFB020", emoji: "🟠" };
-  return { label: "RED", bg: "#FFECEC", fg: "#7F1D1D", border: "#FF3B30", emoji: "🔴" };
-}
+function copyFor(phase: Phase, dayIndex: number): Omit<DayInfo, "date" | "dayIndex" | "phase"> {
+  const base = {
+    Menstrual: {
+      risk: "High" as RiskLevel,
+      mood: [
+        "Tolerance is lower than usual today.",
+        "Small things are more likely to irritate.",
+        "Patience is limited today.",
+      ],
+      libido: [
+        "Interest is basically off today.",
+        "Physical interest is very low.",
+        "This is not a sexual day.",
+      ],
+      energy: [
+        "Energy is low and runs out quickly.",
+        "Energy is limited today.",
+        "Fatigue shows up faster than usual.",
+      ],
+      stress: [
+        "Reaction time is short.",
+        "Stress builds quickly.",
+        "Little patience for friction.",
+      ],
+      communication: [
+        "Talk less if you don’t want an argument.",
+        "Keep conversations short and factual.",
+        "This is not a discussion-heavy day.",
+      ],
+      focus: [
+        "Do not escalate situations.",
+        "Avoid pushing anything forward.",
+        "Maintain stability, nothing more.",
+      ],
+      helps: [
+        "Stick to essentials. Everything else can wait.",
+        "Handle basics and move on.",
+        "Keep the day simple and contained.",
+      ],
+      avoid: [
+        "Opening issues you can’t finish today.",
+        "Pushing for decisions or explanations.",
+        "Turning minor things into topics.",
+      ],
+    },
 
-function copy(phase: Phase, age: number, dayIndex: number) {
-  const t = ageTone(age);
+    Ovulatory: {
+      risk: "Low" as RiskLevel,
+      mood: [
+        "Reactions are faster and more open.",
+        "Engagement is noticeably higher today.",
+        "There’s more responsiveness today.",
+      ],
+      libido: [
+        "Interest is clearly higher today.",
+        "Signals are easier to read today.",
+        "Attraction shows up more directly.",
+      ],
+      energy: [
+        "Energy is higher and more social.",
+        "More drive for interaction today.",
+        "This is a higher-output day.",
+      ],
+      stress: [
+        "Higher tolerance than usual.",
+        "Less defensive reactions.",
+        "Friction is less likely today.",
+      ],
+      communication: [
+        "Tone matters more than wording.",
+        "Simple confidence works best.",
+        "Don’t overtalk.",
+      ],
+      focus: [
+        "Connection is easier today.",
+        "Momentum comes more naturally.",
+        "Engagement pays off.",
+      ],
+      helps: [
+        "Be present and direct.",
+        "Act normally — no strategies.",
+        "Let things flow.",
+      ],
+      avoid: [
+        "Overplaying your hand.",
+        "Forcing escalation.",
+        "Reading too much into signals.",
+      ],
+    },
 
-  if (phase === "Menstrual")
-    return {
-      mood: `Softer day for many. Variability: ${t.variability}.`,
-      libido: "Usually lower; comfort-style closeness fits better.",
-      energy: "Energy often lower.",
-      stress: `Smaller buffer is common. Sensitivity: ${t.sensitivity}.`,
-      communication: "Keep it short, calm, and non-pushy.",
-      partnerFocus: "Low pressure, low drama.",
-      helps: "Practical help + steady tone.",
-      avoid: "Surprise debates, pushing decisions.",
-    };
+    Follicular: {
+      risk: "Low" as RiskLevel,
+      mood: [
+        "Emotional baseline is steadier.",
+        "More even reactions today.",
+        "Less emotional drag.",
+      ],
+      libido: [
+        "Interest is gradually returning.",
+        "Physical interest starts picking up.",
+        "More openness than last week.",
+      ],
+      energy: [
+        "Energy is coming back online.",
+        "More capacity to handle things.",
+        "Drive is improving.",
+      ],
+      stress: [
+        "Better buffer than before.",
+        "Stress is easier to manage.",
+        "More tolerance overall.",
+      ],
+      communication: [
+        "Straightforward conversations work.",
+        "Good day to speak plainly.",
+        "Less risk of misunderstanding.",
+      ],
+      focus: [
+        "Normal life runs smoother.",
+        "Good time to reset rhythm.",
+        "Planning is easier.",
+      ],
+      helps: [
+        "Say what you mean and do it.",
+        "Keep things clear and simple.",
+        "Follow through.",
+      ],
+      avoid: [
+        "Overanalyzing.",
+        "Creating unnecessary tension.",
+        "Digging into old issues.",
+      ],
+    },
 
-  if (phase === "Ovulatory") {
-    const peak = dayIndex === ovulationPeakDayIndex();
+    Luteal: {
+      risk: "Medium" as RiskLevel,
+      mood: [
+        "Less playful, more serious.",
+        "Reactions tighten up.",
+        "Mood shifts are more likely.",
+      ],
+      libido: [
+        "Interest is still there, less central.",
+        "Physical interest is inconsistent.",
+        "Not a priority day.",
+      ],
+      energy: [
+        "Energy is steady, not high.",
+        "Slower pace works better.",
+        "No sprint energy.",
+      ],
+      stress: [
+        "Irritation builds faster.",
+        "Less tolerance for chaos.",
+        "Friction escalates quicker.",
+      ],
+      communication: [
+        "Be precise, not emotional.",
+        "Clarity beats nuance.",
+        "Say it once, cleanly.",
+      ],
+      focus: [
+        "Predictability matters.",
+        "Stability beats excitement.",
+        "Reduce variables.",
+      ],
+      helps: [
+        "Routine and structure.",
+        "Clear expectations.",
+        "No surprises.",
+      ],
+      avoid: [
+        "Last-minute changes.",
+        "Vague plans.",
+        "Mixed signals.",
+      ],
+    },
 
-    const libidoNormal = [
-      "Interest tends to be higher than average.",
-      "Signals are clearer today.",
-      "Less guesswork than usual.",
-      "Receptivity is generally better.",
-      "Flirting is less risky today.",
-      "Affection is more likely to be welcomed.",
-      "Momentum builds easier.",
-      "If it’s a no, it’s still a no — but you’re less likely to misread.",
-    ];
-
-    const libidoPeak = [
-      "Interest is usually at its highest today.",
-      "Signals are harder to miss.",
-      "Less ambiguity than usual.",
-      "Responses come faster.",
-      "If there’s attraction, it shows more clearly today.",
-      "Affection is more likely to be returned.",
-      "Momentum builds easier.",
-      "If it’s a no, it’s still a no — but you’re less likely to misread.",
-    ];
-
-    return {
-      mood: `More open day for many. Variability: ${t.variability}.`,
-      libido: peak ? pick(libidoPeak, dayIndex, 2) : pick(libidoNormal, dayIndex, 2),
-      energy: "More drive is common.",
-      stress: "Often more resilient today.",
-      communication: "Light + direct works best. Don’t overtalk it.",
-      partnerFocus: "Easy day to reconnect.",
-      helps: "Be present. Keep it natural.",
-      avoid: "Pushing, assumptions, making it heavy.",
-    };
-  }
-
-  if (phase === "Luteal")
-    return {
-      mood: `More variable day-to-day. Variability: ${t.variability}.`,
-      libido: "Often moderate then trending down.",
-      energy: "Steady but not peak.",
-      stress: `Sensitivity can rise. Sensitivity: ${t.sensitivity}.`,
-      communication: "Clear and specific beats long talks.",
-      partnerFocus: "Predictability wins.",
-      helps: "Plan early, keep it simple.",
-      avoid: "Last-minute changes, vague requests.",
-    };
-
-  if (phase === "PMS")
-    return {
-      mood: `Higher sensitivity window for many. Variability: ${t.variability}.`,
-      libido: "Often lower or inconsistent.",
-      energy: "Energy often lower.",
-      stress: `Reactivity can be higher. Sensitivity: ${t.sensitivity}.`,
-      communication: "Don’t debate. De-escalate early.",
-      partnerFocus: "Keep the day smaller, not bigger.",
-      helps: "Low pressure + steady tone.",
-      avoid: "Criticism, pushing decisions, sarcasm.",
-    };
+    PMS: {
+      risk: "High" as RiskLevel,
+      mood: [
+        "Reactions are sharper.",
+        "Emotional spikes are more likely.",
+        "Less margin for error.",
+      ],
+      libido: [
+        "Interest is low priority.",
+        "Physical interest is inconsistent.",
+        "Not a focus right now.",
+      ],
+      energy: [
+        "Energy dips are common.",
+        "Fatigue shows up earlier.",
+        "Lower output day.",
+      ],
+      stress: [
+        "Small things feel bigger.",
+        "Stress escalates quickly.",
+        "Tolerance is thin.",
+      ],
+      communication: [
+        "Less explaining, more listening.",
+        "Avoid debates.",
+        "Do not correct.",
+      ],
+      focus: [
+        "Reduce friction.",
+        "Keep the day contained.",
+        "Prevent damage.",
+      ],
+      helps: [
+        "Make things easier, not bigger.",
+        "Lower the noise.",
+        "Keep it simple.",
+      ],
+      avoid: [
+        "Arguments.",
+        "Logic battles.",
+        "Unnecessary confrontation.",
+      ],
+    },
+  }[phase];
 
   return {
-    mood: `Often steadier days. Variability: ${t.variability}.`,
-    libido: "Often rising gradually.",
-    energy: "Energy usually improving.",
-    stress: "Often better buffer today.",
-    communication: "Good day for practical chats.",
-    partnerFocus: "Plans and progress.",
-    helps: "Clear plan + follow-through.",
-    avoid: "Unnecessary tension.",
+    risk: base.risk,
+    mood: pick(base.mood, dayIndex, 1),
+    libido: pick(base.libido, dayIndex, 2),
+    energy: pick(base.energy, dayIndex, 3),
+    stress: pick(base.stress, dayIndex, 4),
+    communication: pick(base.communication, dayIndex, 5),
+    focus: pick(base.focus, dayIndex, 6),
+    helps: pick(base.helps, dayIndex, 7),
+    avoid: pick(base.avoid, dayIndex, 8),
   };
 }
 
-function NavigateInner() {
-  const router = useRouter();
-  const sp = useSearchParams();
-  const age = Number(sp.get("age") || 0);
-  const day1Str = sp.get("day1") || "";
+/* ================= UI ================= */
 
-  const [dismissedCyclePrompt, setDismissedCyclePrompt] = useState(false);
+function NavigateInner() {
+  const sp = useSearchParams();
+  const router = useRouter();
+
+  const age = sp.get("age") || "";
+  const day1Str = sp.get("day1") || "";
+  const bleedOverride = Number(sp.get("bd") || DEFAULTS.bleedDays);
 
   const day1 = useMemo(() => new Date(day1Str + "T12:00:00"), [day1Str]);
-  const today = useMemo(() => new Date(), []);
+  const today = new Date();
 
-  const offset = useMemo(() => {
-    const a = startOfDay(today).getTime();
-    const b = startOfDay(day1).getTime();
-    return Math.floor((a - b) / 86400000);
-  }, [today, day1]);
+  const offset = Math.max(
+    0,
+    Math.floor(
+      (startOfDay(today).getTime() - startOfDay(day1).getTime()) / 86400000
+    )
+  );
 
-  const build = (o: number): DayInfo => {
+  function build(o: number): DayInfo {
     const date = addDays(day1, o);
-    const rawDayIndex = o + 1; // IMPORTANT: can go past 28 for irregular cycles
-    const phase = phaseForDay(rawDayIndex);
-    const risk = riskFor(phase);
-    const c = copy(phase, age, Math.min(rawDayIndex, DEFAULTS.cycleLength));
-    return { date, dayIndex: rawDayIndex, phase, ...risk, ...c };
-  };
+    const dayIndex = o + 1;
+    const phase = phaseForDay(dayIndex, bleedOverride);
+    const c = copyFor(phase, dayIndex);
+    return { date, dayIndex, phase, ...c };
+  }
 
-  const safeOffset = offset < 0 ? 0 : offset;
-  const todayInfo = build(safeOffset);
-  const tomorrowInfo = build(safeOffset + 1);
+  const todayInfo = build(offset);
+  const tomorrowInfo = build(offset + 1);
 
-  const showCyclePrompt = !dismissedCyclePrompt && todayInfo.dayIndex > DEFAULTS.cycleLength;
+  const showBleedQuestion = todayInfo.dayIndex === DEFAULTS.bleedDays + 1;
 
-  function restartCycleFrom(date: Date) {
-    const newDay1 = isoDate(date);
-    router.push(`/navigate?age=${encodeURIComponent(String(age || ""))}&day1=${encodeURIComponent(newDay1)}`);
+  function extendBleed() {
+    router.push(
+      `/navigate?age=${age}&day1=${day1Str}&bd=${todayInfo.dayIndex}`
+    );
   }
 
   return (
-    <main style={{ maxWidth: 900, margin: "28px auto", padding: 18, fontFamily: "system-ui", color: "#111" }}>
-      <h1 style={{ marginTop: 0, marginBottom: 6, fontSize: 28, letterSpacing: -0.2 }}>Day View 🧭</h1>
+    <main style={{ maxWidth: 760, margin: "32px auto", padding: 16 }}>
+      <h1>Day View</h1>
 
-      <div style={{ fontSize: 12, color: "#555", lineHeight: 1.45 }}>
-        Built on hormonal cycle patterns (education-only). Individual responses may differ. Real life always overrides predictions.
-      </div>
-
-      {showCyclePrompt && (
-        <section
-          style={{
-            marginTop: 14,
-            borderRadius: 16,
-            padding: 14,
-            border: "1px solid #ddd",
-            background: "linear-gradient(180deg, #FFF 0%, #F7F7F7 100%)",
-          }}
-        >
-          <div style={{ fontWeight: 800, marginBottom: 6 }}>⏳ Past the “standard” 28 days</div>
-          <div style={{ fontSize: 13, color: "#444", lineHeight: 1.35 }}>
-            Some cycles run long. Quick check: <b>has a new cycle started?</b>
+      {showBleedQuestion && (
+        <div style={{ marginBottom: 16 }}>
+          <strong>Period still going?</strong>
+          <div style={{ display: "flex", gap: 10, marginTop: 8 }}>
+            <button onClick={extendBleed}>Yes</button>
+            <button>No</button>
           </div>
-
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
-            <button
-              onClick={() => restartCycleFrom(todayInfo.date)}
-              style={{
-                border: "1px solid #111",
-                background: "#111",
-                color: "#fff",
-                padding: "10px 12px",
-                borderRadius: 12,
-                fontWeight: 800,
-                cursor: "pointer",
-              }}
-            >
-              ✅ Yes — restart from today
-            </button>
-
-            <button
-              onClick={() => setDismissedCyclePrompt(true)}
-              style={{
-                border: "1px solid #ddd",
-                background: "#fff",
-                color: "#111",
-                padding: "10px 12px",
-                borderRadius: 12,
-                fontWeight: 800,
-                cursor: "pointer",
-              }}
-            >
-              ❌ Not yet
-            </button>
-          </div>
-        </section>
+        </div>
       )}
 
-      {[{ label: "TODAY", d: todayInfo }, { label: "TOMORROW", d: tomorrowInfo }].map(({ label, d }) => {
-        const meta = phaseMeta(d.phase);
-        const rb = riskBadge(d.risk);
-
-        return (
-          <section
-            key={label}
-            style={{
-              borderRadius: 18,
-              padding: 16,
-              background: meta.bg,
-              marginTop: 14,
-              border: "1px solid #eee",
-              boxShadow: "0 1px 0 rgba(0,0,0,0.04)",
-              position: "relative",
-              overflow: "hidden",
-            }}
-          >
-            <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 7, background: meta.border }} />
-
-            <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "baseline" }}>
-              <strong style={{ fontSize: 13, letterSpacing: 0.4, paddingLeft: 8 }}>{label}</strong>
-              <span style={{ color: "#666", fontSize: 13 }}>{fmt(d.date)}</span>
-            </div>
-
-            <div style={{ marginTop: 10, paddingLeft: 8, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
-              <span
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "8px 10px",
-                  borderRadius: 999,
-                  background: meta.pillBg,
-                  color: meta.pillFg,
-                  fontSize: 12,
-                  fontWeight: 800,
-                  border: `1px solid ${meta.border}`,
-                }}
-              >
-                <span aria-hidden="true">{meta.emoji}</span>
-                <span>
-                  Day {d.dayIndex}
-                  {d.dayIndex > DEFAULTS.cycleLength ? " (late)" : ""} — {d.phase}
-                </span>
-              </span>
-
-              <span
-                style={{
-                  display: "inline-flex",
-                  alignItems: "center",
-                  gap: 8,
-                  padding: "8px 10px",
-                  borderRadius: 999,
-                  background: rb.bg,
-                  color: rb.fg,
-                  fontSize: 12,
-                  fontWeight: 800,
-                  border: `1px solid ${rb.border}`,
-                }}
-                title={d.riskNote}
-              >
-                <span aria-hidden="true">{rb.emoji}</span>
-                <span>{rb.label}</span>
-                <span style={{ fontWeight: 700, opacity: 0.9 }}>Risk: {d.risk}</span>
-              </span>
-            </div>
-
-            <div style={{ marginTop: 12, display: "grid", gap: 10, fontSize: 14, lineHeight: 1.35, paddingLeft: 8 }}>
-              <div>
-                <b>🙂 Mood:</b> {d.mood}
-              </div>
-              <div>
-                <b>🔥 Libido:</b> {d.libido}
-              </div>
-              <div>
-                <b>⚡ Energy:</b> {d.energy}
-              </div>
-              <div>
-                <b>🧯 Stress response:</b> {d.stress}
-              </div>
-              <div>
-                <b>💬 Communication:</b> {d.communication}
-              </div>
-              <div>
-                <b>🎯 Partner focus:</b> {d.partnerFocus}
-              </div>
-              <div>
-                <b>✅ What helps:</b> {d.helps}
-              </div>
-              <div>
-                <b>🚫 What to avoid:</b> {d.avoid}
-              </div>
-            </div>
+      {[{ label: "TODAY", d: todayInfo }, { label: "TOMORROW", d: tomorrowInfo }].map(
+        ({ label, d }) => (
+          <section key={label} style={{ marginBottom: 20 }}>
+            <h3>
+              {label} — {fmt(d.date)} (Day {d.dayIndex}, {d.phase})
+            </h3>
+            <ul>
+              <li><b>Mood:</b> {d.mood}</li>
+              <li><b>Libido:</b> {d.libido}</li>
+              <li><b>Energy:</b> {d.energy}</li>
+              <li><b>Stress:</b> {d.stress}</li>
+              <li><b>Communication:</b> {d.communication}</li>
+              <li><b>Focus:</b> {d.focus}</li>
+              <li><b>Helps:</b> {d.helps}</li>
+              <li><b>Avoid:</b> {d.avoid}</li>
+            </ul>
           </section>
-        );
-      })}
+        )
+      )}
     </main>
   );
 }
 
 export default function Page() {
   return (
-    <Suspense
-      fallback={<div style={{ maxWidth: 900, margin: "28px auto", padding: 18, fontFamily: "system-ui" }}>Loading…</div>}
-    >
+    <Suspense fallback={<div>Loading…</div>}>
       <NavigateInner />
     </Suspense>
   );
