@@ -72,10 +72,10 @@ function phaseForDay(dayIndex: number): Phase {
 
 // ✅ typed RiskLevel literals
 function riskFor(phase: Phase): { risk: RiskLevel; riskNote: string } {
-  if (phase === "PMS") return { risk: "High sensitivity", riskNote: "Emotions may spike faster." };
-  if (phase === "Menstrual") return { risk: "Be mindful", riskNote: "Lower energy and tolerance." };
-  if (phase === "Luteal") return { risk: "Be mindful", riskNote: "More variability possible." };
-  return { risk: "Low friction", riskNote: "Generally easier interaction window." };
+  if (phase === "PMS") return { risk: "High sensitivity", riskNote: "Short fuse. Things escalate fast." };
+  if (phase === "Menstrual") return { risk: "Be mindful", riskNote: "Lower energy. Don't push." };
+  if (phase === "Luteal") return { risk: "Be mindful", riskNote: "More variability. Stay steady." };
+  return { risk: "Low friction", riskNote: "Easier day. Less hassle." };
 }
 
 function startOfDay(d: Date) {
@@ -99,13 +99,13 @@ function copy(phase: Phase, age: number, dayIndex: number) {
 
   if (phase === "Menstrual")
     return {
-      mood: `More inward, comfort-seeking. Variability is ${t.variability}.`,
-      libido: "Often lower; closeness can be more comfort-focused.",
-      energy: "Lower energy is common.",
-      stress: `Lower tolerance is common. Sensitivity is ${t.sensitivity}.`,
-      communication: "Gentle tone; keep questions simple; no pressure.",
-      partnerFocus: "Support and comfort first.",
-      helps: "Warmth, reassurance, practical help.",
+      mood: "Withdrawn. Low energy.",
+      libido: "Interest is low. Leave it alone.",
+      energy: "Lower energy.",
+      stress: `Short fuse. Sensitivity is ${t.sensitivity}.`,
+      communication: "Keep it brief. No pressure.",
+      partnerFocus: "Don't push. Leave her be.",
+      helps: "Practical help. That's it.",
       avoid: "Pushing decisions, surprise debates.",
     };
 
@@ -135,50 +135,50 @@ function copy(phase: Phase, age: number, dayIndex: number) {
     ];
 
     return {
-      mood: `Often more open and expressive. Variability is ${t.variability}.`,
+      mood: `More open. Variability is ${t.variability}.`,
       libido: peak ? pick(libidoPeak, dayIndex, 2) : pick(libidoNormal, dayIndex, 2),
-      energy: "Higher drive is more likely.",
-      stress: "Tolerance is often stronger.",
-      communication: "Clear, warm, direct. Don’t overtalk it.",
-      partnerFocus: "This is usually an easier day to reconnect.",
-      helps: "Be present. Keep it natural.",
+      energy: "Higher drive.",
+      stress: "Tolerance is stronger.",
+      communication: "Clear and direct. Don’t overtalk.",
+      partnerFocus: "Easier day to hang out.",
+      helps: "Keep it straightforward.",
       avoid: "Pushing, assumptions, making it heavy.",
     };
   }
 
   if (phase === "Luteal")
     return {
-      mood: `More serious or reflective. Variability is ${t.variability}.`,
-      libido: "Often moderate then trending down.",
-      energy: "Steady but not peak.",
-      stress: `Sensitivity can rise gradually. Sensitivity is ${t.sensitivity}.`,
-      communication: "Be clear; keep requests specific.",
-      partnerFocus: "Predictability and calm.",
-      helps: "Routine, clarity, reassurance.",
+      mood: `More serious. Variability is ${t.variability}.`,
+      libido: "Moderate. Trending down.",
+      energy: "Steady. Not peak.",
+      stress: `Sensitivity rises. Sensitivity is ${t.sensitivity}.`,
+      communication: "Be clear. Keep requests specific.",
+      partnerFocus: "Predictability. Keep it steady.",
+      helps: "Routine. Clarity. No chaos.",
       avoid: "Last-minute changes, vague expectations.",
     };
 
   if (phase === "PMS")
     return {
-      mood: `More sensitive day-to-day. Variability is ${t.variability}.`,
-      libido: "Often lower or inconsistent.",
-      energy: "Lower energy is common.",
-      stress: `Reactivity can be higher. Sensitivity is ${t.sensitivity}.`,
+      mood: `More sensitive. Variability is ${t.variability}.`,
+      libido: "Lower or inconsistent.",
+      energy: "Lower energy.",
+      stress: `Reactivity higher. Sensitivity is ${t.sensitivity}.`,
       communication: "Keep it calm; don’t turn it into a debate.",
-      partnerFocus: "Make the day simpler, not bigger.",
-      helps: "Low pressure, steady tone.",
+      partnerFocus: "Keep the day simple.",
+      helps: "Low pressure. Steady.",
       avoid: "Debates, criticism, pushing decisions.",
     };
 
   // Follicular
   return {
-    mood: `Often stable and clear. Variability is ${t.variability}.`,
-    libido: "Often rising gradually.",
-    energy: "Energy usually improving.",
-    stress: "Resilience is often better.",
-    communication: "Collaborative and direct.",
+    mood: `Stable and clear. Variability is ${t.variability}.`,
+    libido: "Rising gradually.",
+    energy: "Energy improving.",
+    stress: "Resilience better.",
+    communication: "Direct. Collaborative.",
     partnerFocus: "Good day for plans and normal conversations.",
-    helps: "Clear plans, follow-through.",
+    helps: "Clear plans. Follow through.",
     avoid: "Unnecessary tension.",
   };
 }
@@ -211,10 +211,10 @@ export default function NavigateClient() {
 
   return (
     <main style={{ maxWidth: 720, margin: "40px auto", padding: 20, fontFamily: "system-ui" }}>
-      <h1 style={{ marginTop: 0 }}>Day View</h1>
+      <h1 style={{ marginTop: 0 }}>Cycle Forecast</h1>
 
       <div style={{ fontSize: 13, color: "#444", marginBottom: 14 }}>
-        Built on hormonal cycle patterns. Individual responses may differ. Real life always overrides predictions.
+        Pattern-based. Fewer arguments, better relationship. Individual responses differ. Not medical advice.
       </div>
 
       {[{ label: "TODAY", d: todayInfo }, { label: "TOMORROW", d: tomorrowInfo }].map(({ label, d }) => (

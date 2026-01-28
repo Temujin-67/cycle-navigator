@@ -1,13 +1,31 @@
 :root {
   --background: #ffffff;
   --foreground: #171717;
+  --text-secondary: #444444;
+  --input-bg: #fafafa;
+  --input-border: #e0e0e0;
+  --input-focus-border: #16A34A;
+  --button-primary: #16A34A;
+  --button-primary-hover: #138636;
+  --button-primary-color: #ffffff;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
     --background: #0a0a0a;
     --foreground: #ededed;
+    --text-secondary: #a3a3a3;
+    --input-bg: #1a1a1a;
+    --input-border: #333333;
+    --input-focus-border: #22c55e;
+    --button-primary: #22c55e;
+    --button-primary-hover: #16a34a;
+    --button-primary-color: #0a0a0a;
   }
+}
+
+html {
+  font-size: 16px;
 }
 
 html,
@@ -19,7 +37,7 @@ body {
 body {
   color: var(--foreground);
   background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }

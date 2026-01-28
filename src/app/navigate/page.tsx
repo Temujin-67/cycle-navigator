@@ -26,7 +26,7 @@ type DayInfo = {
 
 const DEFAULTS = {
   cycleLength: 28,
-  bleedDays: 7, // theoretical default
+  bleedDays: 5, // check from Day 6 (5-day period possible)
   pmsDays: 5,
   ovulationWindow: 3,
 };
@@ -103,33 +103,47 @@ function fertilityLine(dayIndex: number) {
   return "Lower odds today (relative to fertile window).";
 }
 
-// --- Dynamic emoji resolvers (meaning-based) ---
-function moodEmoji(text: string) {
-  const t = text.toLowerCase();
-  if (t.includes("smooth") || t.includes("even") || t.includes("normal") || t.includes("less friction")) return "🙂";
-  if (t.includes("irritate") || t.includes("limited") || t.includes("sharp") || t.includes("less margin")) return "😑";
-  if (t.includes("variable") || t.includes("serious") || t.includes("annoyed")) return "😐";
-  return "😐";
+// Best / worst day ranges for this cycle (depends on bleed)
+function bestWorstRanges(bleedOverride: number) {
+  const bleed = bleedOverride ?? DEFAULTS.bleedDays;
+  const ovCenter = Math.round(DEFAULTS.cycleLength / 2);
+  const ovHalf = Math.floor(DEFAULTS.ovulationWindow / 2);
+  const ovStart = ovCenter - ovHalf;
+  const ovEnd = ovCenter + ovHalf;
+  const pmsStart = DEFAULTS.cycleLength - DEFAULTS.pmsDays + 1;
+  const fertileStart = ovCenter - 2;
+  const fertileEnd = ovCenter + 1;
+  const bestStart = bleed + 1;
+  const bestEnd = ovEnd;
+  const worstStart = pmsStart;
+  const worstEnd = DEFAULTS.cycleLength;
+  return {
+    bestDays: `Day ${bestStart}-${bestEnd}`,
+    worstDays: `Day ${worstStart}-${worstEnd}`,
+    bestLibidoDays: `Day ${ovStart}-${ovEnd}`,
+    worstLibidoDays: `Day 1-${bleed}, ${pmsStart}-${worstEnd}`,
+    bestPregnancyDays: `Day ${fertileStart}-${fertileEnd}`,
+  };
 }
 
-function libidoEmoji(text: string) {
-  const t = text.toLowerCase();
-  // very low / off
-  if (t.includes("off") || t.includes("not a sexual") || t.includes("basically off") || t.includes("low interest"))
-    return "🚫";
-  // warming / moderate
-  if (t.includes("warming") || t.includes("spark") || t.includes("flirt")) return "🔥";
-  // high / peak
-  if (t.includes("higher") || t.includes("clearly higher") || t.includes("obvious") || t.includes("peak")) return "🔥🔥";
-  // default neutral
-  return "❄️";
+// Phase-based emojis: bad mood never gets smiley, low libido never gets fire
+function moodEmojiForPhase(phase: Phase): string {
+  if (phase === "Menstrual" || phase === "PMS") return "😑";
+  if (phase === "Luteal") return "😐";
+  return "🙂"; // Follicular, Ovulatory
 }
 
-function stressEmoji(text: string) {
-  const t = text.toLowerCase();
-  if (t.includes("explode") || t.includes("thin") || t.includes("sharp") || t.includes("short fuse")) return "🔴";
-  if (t.includes("buffer") || t.includes("tolerance") || t.includes("less likely") || t.includes("lower friction")) return "🟢";
-  return "🟠";
+function libidoEmojiForPhase(phase: Phase): string {
+  if (phase === "Menstrual" || phase === "PMS") return "🚫";
+  if (phase === "Ovulatory") return "🔥";
+  if (phase === "Follicular") return "❄️"; // building
+  return "❄️"; // Luteal: moderate
+}
+
+function stressEmojiForPhase(phase: Phase): string {
+  if (phase === "Menstrual" || phase === "PMS") return "🔴";
+  if (phase === "Luteal") return "🟠";
+  return "🟢"; // Follicular, Ovulatory
 }
 
 function copyFor(phase: Phase, dayIndex: number, viewSalt: number) {
@@ -137,19 +151,19 @@ function copyFor(phase: Phase, dayIndex: number, viewSalt: number) {
   if (phase === "Follicular") {
     return {
       mood: pick(
-        ["More normal today. Less friction.", "Smoother day overall. Fewer landmines.", "More even day. Things land better."],
+        ["She's in a better mood. Less hassle.", "Easier day. Fewer blow-ups.", "More even. Stuff goes smoother."],
         dayIndex,
         11,
         viewSalt
       ),
       libido: pick(
-        ["Interest is warming up.", "More spark than last week.", "Flirt energy is easier today."],
+        ["Interest is picking up.", "Better than last week.", "Easier day for that."],
         dayIndex,
         12,
         viewSalt
       ),
       stress: pick(
-        ["Small stuff is less likely to explode.", "Better buffer today.", "More tolerance for normal life."],
+        ["She won't blow up as easy.", "More patience today.", "Normal stuff doesn't set her off."],
         dayIndex,
         14,
         viewSalt
@@ -161,13 +175,13 @@ function copyFor(phase: Phase, dayIndex: number, viewSalt: number) {
         viewSalt
       ),
       play: pick(
-        ["Do the practical stuff today.", "Decide once and move on.", "Make the plan and follow it."],
+        ["Get practical stuff done.", "Decide and move on.", "Make a plan and stick to it."],
         dayIndex,
         16,
         viewSalt
       ),
       avoid: pick(
-        ["Starting unnecessary tension.", "Picking at small issues.", "Turning small stuff into a topic."],
+        ["Don't start fights over nothing.", "Don't nitpick.", "Don't make a big deal out of small stuff."],
         dayIndex,
         18,
         viewSalt
@@ -178,37 +192,37 @@ function copyFor(phase: Phase, dayIndex: number, viewSalt: number) {
   if (phase === "Ovulatory") {
     return {
       mood: pick(
-        ["More open today. Faster reactions.", "Higher engagement today.", "More responsive vibe today."],
+        ["She's more open today.", "She's more up for stuff.", "She responds better today."],
         dayIndex,
         21,
         viewSalt
       ),
       libido: pick(
-        ["Interest is clearly higher today.", "Signals are easier to read today.", "More obvious attraction day."],
+        ["Interest is up today.", "Signals are clearer.", "Attraction is more obvious."],
         dayIndex,
         22,
         viewSalt
       ),
       stress: pick(
-        ["Harder to annoy today (usually).", "Lower friction day.", "Less defensive than usual."],
+        ["Harder to annoy her today.", "Less friction.", "She's less defensive."],
         dayIndex,
         24,
         viewSalt
       ),
       communication: pick(
-        ["Tone matters more than wording.", "Keep it confident and simple.", "Don’t overtalk."],
+        ["How you say it matters more than what you say.", "Keep it simple and confident.", "Don’t overtalk."],
         dayIndex,
         25,
         viewSalt
       ),
       play: pick(
-        ["Show up properly today.", "Be present. That’s the whole move.", "Put effort in — without trying too hard."],
+        ["Show up. Put in the effort.", "Be there. Don't half-ass it.", "Put in effort. Don't overdo it."],
         dayIndex,
         26,
         viewSalt
       ),
       avoid: pick(
-        ["Making it heavy.", "Trying too hard.", "Forcing escalation."],
+        ["Don't make it a big thing.", "Don't try too hard.", "Don't push."],
         dayIndex,
         28,
         viewSalt
@@ -219,37 +233,37 @@ function copyFor(phase: Phase, dayIndex: number, viewSalt: number) {
   if (phase === "Menstrual") {
     return {
       mood: pick(
-        ["Tolerance is lower than usual today.", "Patience is limited today.", "Small things irritate faster today."],
+        ["She has less patience today.", "Short fuse today.", "Small stuff irritates her faster."],
         dayIndex,
         31,
         viewSalt
       ),
       libido: pick(
-        ["Interest is basically off today.", "Low interest day.", "Not a sexual day."],
+        ["Interest is low today.", "Not a sex day.", "Leave it alone today."],
         dayIndex,
         32,
         viewSalt
       ),
       stress: pick(
-        ["Stress builds quickly.", "Little patience for friction.", "Short fuse potential."],
+        ["She gets stressed fast.", "No patience for hassle.", "Short fuse."],
         dayIndex,
         34,
         viewSalt
       ),
       communication: pick(
-        ["Talk less if you don’t want an argument.", "Keep it short and factual.", "Not a discussion day."],
+        ["Talk less. Or you'll get an argument.", "Keep it short. Stick to facts.", "Not the day for long talks."],
         dayIndex,
         35,
         viewSalt
       ),
       play: pick(
-        ["Handle essentials only. Everything else can wait.", "Do the basics and don’t create extra work.", "Keep the day simple and steady."],
+        ["Handle the essentials. Skip the rest.", "Do the basics. Don’t add more.", "Keep it simple. Don't add stress."],
         dayIndex,
         36,
         viewSalt
       ),
       avoid: pick(
-        ["Starting big talks.", "Pushing decisions.", "Opening issues you can’t finish today."],
+        ["Don't start big talks.", "Don't push for decisions.", "Don't bring up stuff you can’t fix today."],
         dayIndex,
         38,
         viewSalt
@@ -260,37 +274,37 @@ function copyFor(phase: Phase, dayIndex: number, viewSalt: number) {
   if (phase === "Luteal") {
     return {
       mood: pick(
-        ["Less playful, more serious.", "More variable day.", "More easily annoyed day."],
+        ["Less playful. More serious.", "Mood varies.", "She gets annoyed easier."],
         dayIndex,
         41,
         viewSalt
       ),
       libido: pick(
-        ["More mood-dependent.", "Still there, less central.", "More inconsistent than peak days."],
+        ["Depends on her mood.", "Possible but not a given.", "Less consistent than last week."],
         dayIndex,
         42,
         viewSalt
       ),
       stress: pick(
-        ["Less tolerance for chaos.", "Irritation builds faster.", "More friction if you push."],
+        ["She can't handle chaos today.", "She gets irritated faster.", "If you push, you get friction."],
         dayIndex,
         44,
         viewSalt
       ),
       communication: pick(
-        ["Be clear and specific.", "Say it once, cleanly.", "Avoid vague requests."],
+        ["Be clear. Be specific.", "Say it once. Say it clear.", "No vague stuff."],
         dayIndex,
         45,
         viewSalt
       ),
       play: pick(
-        ["Keep plans stable and predictable.", "Lower the chaos. Keep it tidy.", "Do routine, not surprises."],
+        ["Stick to the plan. No surprises.", "Less chaos. Keep it tidy.", "Routine. No surprises."],
         dayIndex,
         46,
         viewSalt
       ),
       avoid: pick(
-        ["Last-minute changes.", "‘We’ll see’ answers.", "Making things messy."],
+        ["No last-minute changes.", "‘We’ll see’ answers.", "Don't make a mess of things."],
         dayIndex,
         48,
         viewSalt
@@ -301,37 +315,37 @@ function copyFor(phase: Phase, dayIndex: number, viewSalt: number) {
   // PMS
   return {
     mood: pick(
-      ["Less margin for error.", "Reactions are sharper.", "More sensitive to tone."],
+      ["No room for error.", "She reacts sharp.", "She's sensitive to how you say things."],
       dayIndex,
       51,
       viewSalt
     ),
     libido: pick(
-      ["Low priority today.", "Not the focus.", "Inconsistent."],
+      ["Not a priority today.", "Forget it today.", "Unpredictable."],
       dayIndex,
       52,
       viewSalt
     ),
     stress: pick(
-      ["Small things feel bigger.", "Escalates faster.", "Thin tolerance."],
+      ["Small stuff feels big to her.", "Things escalate fast.", "Thin patience."],
       dayIndex,
       54,
       viewSalt
     ),
     communication: pick(
-      ["Avoid debates.", "Do not correct.", "Less explaining, more listening."],
+      ["No debates.", "Don't correct her.", "Listen more. Explain less."],
       dayIndex,
       55,
       viewSalt
     ),
     play: pick(
-      ["Handle basics and don’t poke.", "Reduce friction. Keep it calm.", "Prevent damage. Keep it simple."],
+      ["Do the basics. Don’t poke.", "Reduce friction. Keep it calm.", "Don't make it worse. Keep it simple."],
       dayIndex,
       56,
       viewSalt
     ),
     avoid: pick(
-      ["Arguments.", "Logic battles.", "Unnecessary confrontation."],
+      ["No arguments.", "No logic battles.", "No pointless fights."],
       dayIndex,
       58,
       viewSalt
@@ -441,9 +455,9 @@ function DayCard({ d }: { d: DayInfo }) {
       </div>
 
       <div style={{ marginTop: 14, display: "grid", gap: 12 }}>
-        {row(moodEmoji(d.mood), "Mood", d.mood)}
-        {row(libidoEmoji(d.libido), "Libido", d.libido)}
-        {row(stressEmoji(d.stress), "Stress", d.stress)}
+        {row(moodEmojiForPhase(d.phase), "Mood", d.mood)}
+        {row(libidoEmojiForPhase(d.phase), "Libido", d.libido)}
+        {row(stressEmojiForPhase(d.phase), "Stress", d.stress)}
         {row("💬", "Communication", d.communication)}
         {row("▶️", "Play", d.play)}
         {row("🚫", "Avoid", d.avoid)}
@@ -451,7 +465,7 @@ function DayCard({ d }: { d: DayInfo }) {
       </div>
 
       <div style={{ marginTop: 14, fontSize: 12, color: "#444", lineHeight: 1.35 }}>
-        Educational pattern-based view. Individual responses may differ.
+        Pattern-based. Individual responses differ. Not medical advice.
       </div>
     </section>
   );
@@ -492,13 +506,14 @@ function NavigateInner() {
 
   const current = useMemo(() => build(viewOffset, delta + 100), [viewOffset, delta, bleedOverride]);
 
-  // Day 8 prompt: period theoretically over (7 days); ask if still going
-  const showBleedQuestion = !dismissBleedPrompt && current.dayIndex === DEFAULTS.bleedDays + 1;
+  // Ask "period over?" on first day after current assumed bleed (Day 6 if default 5, then 7, 8...)
+  const showBleedQuestion = !dismissBleedPrompt && current.dayIndex === bleedOverride + 1;
 
   const qpBase = `age=${encodeURIComponent(age)}&day1=${encodeURIComponent(day1Str)}`;
 
   function extendBleedToCurrentDay() {
     router.push(`/navigate?${qpBase}&bd=${encodeURIComponent(String(current.dayIndex))}`);
+    router.refresh();
   }
 
   // --- Swipe handling (no libs) ---
@@ -507,6 +522,7 @@ function NavigateInner() {
     startX: 0,
     dx: 0,
   });
+  const touchStartX = useRef(0);
 
   const [dragPx, setDragPx] = useState(0);
 
@@ -525,7 +541,8 @@ function NavigateInner() {
     setDragPx(dx);
   };
 
-  const onPointerEnd = () => {
+  const onPointerEnd = (e?: React.PointerEvent) => {
+    if (e?.pointerType === "touch") return; // let touch handlers handle it
     if (!drag.current.active) return;
     drag.current.active = false;
 
@@ -543,6 +560,28 @@ function NavigateInner() {
     setDragPx(0);
   };
 
+  const onTouchStart = (e: React.TouchEvent) => {
+    touchStartX.current = e.touches[0].clientX;
+  };
+
+  const onTouchMove = (e: React.TouchEvent) => {
+    setDragPx(e.touches[0].clientX - touchStartX.current);
+  };
+
+  const onTouchEnd = (e: React.TouchEvent) => {
+    const dx = e.changedTouches[0].clientX - touchStartX.current;
+    if (dx <= -70) {
+      setDelta((v) => v + 1);
+    } else if (dx >= 70) {
+      setDelta((v) => Math.max(v - 1, -baseOffset));
+    }
+    setDragPx(0);
+  };
+
+  const onTouchCancel = () => {
+    setDragPx(0);
+  };
+
   return (
     <main
       style={{
@@ -554,16 +593,94 @@ function NavigateInner() {
       }}
     >
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
-        <div style={{ fontSize: 22, fontWeight: 1000 as any, letterSpacing: -0.2 }}>Day View 🧭</div>
+        <div style={{ fontSize: 22, fontWeight: 1000 as any, letterSpacing: -0.2 }}>Cycle Forecast</div>
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          <Link href={`/calendar?${qpBase}`} style={{ fontSize: 13, textDecoration: "none", fontWeight: 900 }}>
-            📅 Month
-          </Link>
           <Link href="/" style={{ fontSize: 13, textDecoration: "none", fontWeight: 900 }}>
             🏠 Home
           </Link>
         </div>
       </div>
+
+      {/* Best day / Worst day for this cycle */}
+      <section style={{ marginTop: 14 }}>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+            gap: 10,
+          }}
+        >
+          <div
+            style={{
+              padding: 12,
+              borderRadius: 12,
+              background: "#F1FFF5",
+              border: "1px solid #16A34A",
+            }}
+          >
+            <div style={{ fontSize: 11, fontWeight: 800, color: "#0B6B45", marginBottom: 4 }}>Best day for conversations</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#111" }}>{bestWorstRanges(bleedOverride).bestDays}</div>
+            <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Conversations, planning, hanging out.</div>
+          </div>
+          <div
+            style={{
+              padding: 12,
+              borderRadius: 12,
+              background: "#FFECEC",
+              border: "1px solid #EF4444",
+            }}
+          >
+            <div style={{ fontSize: 11, fontWeight: 800, color: "#7F1D1D", marginBottom: 4 }}>Worst day for</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#111" }}>{bestWorstRanges(bleedOverride).worstDays}</div>
+            <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Big talks, pushing decisions, arguments.</div>
+          </div>
+        </div>
+        <div
+          style={{
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
+            gap: 10,
+            marginTop: 10,
+          }}
+        >
+          <div
+            style={{
+              padding: 12,
+              borderRadius: 12,
+              background: "#FFF7E6",
+              border: "1px solid #F59E0B",
+            }}
+          >
+            <div style={{ fontSize: 11, fontWeight: 800, color: "#7A4B00", marginBottom: 4 }}>Best day for libido</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#111" }}>{bestWorstRanges(bleedOverride).bestLibidoDays}</div>
+            <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Interest highest. Signals clearer.</div>
+          </div>
+          <div
+            style={{
+              padding: 12,
+              borderRadius: 12,
+              background: "#FFECEC",
+              border: "1px solid #EF4444",
+            }}
+          >
+            <div style={{ fontSize: 11, fontWeight: 800, color: "#7F1D1D", marginBottom: 4 }}>Worst day for libido</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#111" }}>{bestWorstRanges(bleedOverride).worstLibidoDays}</div>
+            <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Low interest. Leave it alone.</div>
+          </div>
+          <div
+            style={{
+              padding: 12,
+              borderRadius: 12,
+              background: "#EEF7FF",
+              border: "1px solid #2563EB",
+            }}
+          >
+            <div style={{ fontSize: 11, fontWeight: 800, color: "#0B4A84", marginBottom: 4 }}>Best day for pregnancy</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#111" }}>{bestWorstRanges(bleedOverride).bestPregnancyDays}</div>
+            <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Fertile window. Highest odds.</div>
+          </div>
+        </div>
+      </section>
 
       {showBleedQuestion && (
         <section
@@ -576,9 +693,9 @@ function NavigateInner() {
             boxShadow: "0 1px 0 rgba(0,0,0,0.05)",
           }}
         >
-          <div style={{ fontWeight: 1000 as any }}>🩸 Day {current.dayIndex}: period still going?</div>
+          <div style={{ fontWeight: 1000 as any }}>Day {current.dayIndex}: period over yet?</div>
           <div style={{ marginTop: 6, fontSize: 13, color: "#444" }}>
-            Default assumption is ~7 days. Some people bleed longer.
+            Can be 5–7 days. Some longer. We need to know so the app gets the phase right.
           </div>
 
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
@@ -594,7 +711,7 @@ function NavigateInner() {
                 cursor: "pointer",
               }}
             >
-              ✅ Yes (extend)
+              No, still going
             </button>
 
             <button
@@ -609,7 +726,7 @@ function NavigateInner() {
                 cursor: "pointer",
               }}
             >
-              ❌ No
+              Yes, over
             </button>
           </div>
         </section>
@@ -619,10 +736,14 @@ function NavigateInner() {
         <div
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
-          onPointerUp={onPointerEnd}
-          onPointerCancel={onPointerEnd}
+          onPointerUp={(e) => onPointerEnd(e)}
+          onPointerCancel={(e) => onPointerEnd(e)}
+          onTouchStart={onTouchStart}
+          onTouchMove={onTouchMove}
+          onTouchEnd={onTouchEnd}
+          onTouchCancel={onTouchCancel}
           style={{
-            touchAction: "pan-y",
+            touchAction: "none",
             transform: `translateX(${dragPx}px)`,
             transition: drag.current.active ? "none" : "transform 160ms ease-out",
           }}
