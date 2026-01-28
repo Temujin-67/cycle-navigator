@@ -525,10 +525,6 @@ function NavigateInner() {
     router.refresh();
   }
 
-  const weekDays = useMemo(() => {
-    return Array.from({ length: 7 }, (_, i) => build(baseOffset + i));
-  }, [baseOffset, bleedOverride, cycleLength]);
-
   const [cycleHistory, setCycleHistory] = useState<number[]>([]);
   React.useEffect(() => {
     try {
@@ -538,16 +534,6 @@ function NavigateInner() {
       setCycleHistory([]);
     }
   }, []);
-
-  const [shareCopied, setShareCopied] = useState(false);
-  function copyWeekSummary() {
-    const lines = weekDays.map((d) => `${fmt(d.date)} · Day ${d.dayIndex} · ${d.phase} phase · Conflict risk: ${d.risk}`);
-    const text = `Cycle Forecast – Next 7 days\n${lines.join("\n")}`;
-    if (typeof navigator !== "undefined" && navigator.clipboard) {
-      navigator.clipboard.writeText(text).then(() => setShareCopied(true));
-      setTimeout(() => setShareCopied(false), 2000);
-    }
-  }
 
   // --- Swipe handling (no libs) ---
   const drag = useRef({
@@ -733,48 +719,6 @@ function NavigateInner() {
             Last {cycleHistory.length} cycle{cycleHistory.length !== 1 ? "s" : ""}: {cycleHistory.join(", ")} days
           </div>
         )}
-      </section>
-
-      <section style={{ marginTop: 14 }}>
-        <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 8 }}>Next 7 days</div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-          {weekDays.map((d) => (
-            <div
-              key={d.dayIndex}
-              style={{
-                display: "flex",
-                justifyContent: "space-between",
-                alignItems: "center",
-                padding: "8px 12px",
-                borderRadius: 10,
-                border: "1px solid var(--input-border)",
-                background: "var(--background)",
-                fontSize: 13,
-              }}
-            >
-              <span style={{ fontWeight: 700 }}>{fmt(d.date)}</span>
-              <span>Day {d.dayIndex}</span>
-              <span>{d.phase} phase</span>
-              <span>Conflict risk: {d.risk}</span>
-            </div>
-          ))}
-        </div>
-        <button
-          type="button"
-          onClick={copyWeekSummary}
-          style={{
-            marginTop: 10,
-            padding: "8px 12px",
-            borderRadius: 10,
-            border: "1px solid var(--input-border)",
-            background: "var(--background)",
-            fontSize: 12,
-            fontWeight: 700,
-            cursor: "pointer",
-          }}
-        >
-          {shareCopied ? "Copied!" : "Copy week summary"}
-        </button>
       </section>
 
       {showBleedQuestion && (
