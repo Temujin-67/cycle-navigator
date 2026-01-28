@@ -11,7 +11,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --background: #0a0a0a;
     --foreground: #ededed;
     --text-secondary: #a3a3a3;
@@ -22,6 +22,30 @@
     --button-primary-hover: #16a34a;
     --button-primary-color: #0a0a0a;
   }
+}
+
+[data-theme="dark"] {
+  --background: #0a0a0a;
+  --foreground: #ededed;
+  --text-secondary: #a3a3a3;
+  --input-bg: #1a1a1a;
+  --input-border: #333333;
+  --input-focus-border: #22c55e;
+  --button-primary: #22c55e;
+  --button-primary-hover: #16a34a;
+  --button-primary-color: #0a0a0a;
+}
+
+[data-theme="light"] {
+  --background: #ffffff;
+  --foreground: #171717;
+  --text-secondary: #444444;
+  --input-bg: #fafafa;
+  --input-border: #e0e0e0;
+  --input-focus-border: #16A34A;
+  --button-primary: #16A34A;
+  --button-primary-hover: #138636;
+  --button-primary-color: #ffffff;
 }
 
 html {

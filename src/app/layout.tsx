@@ -23,7 +23,14 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){var t=document.documentElement.getAttribute("data-theme")||(typeof localStorage!="undefined"&&localStorage.getItem("cf_theme"))||"";if(t==="dark"||t==="light")document.documentElement.setAttribute("data-theme",t);})();`,
+          }}
+        />
+      </head>
       <body className={`${geistSans.variable} ${geistMono.variable}`}>
         {children}
       </body>

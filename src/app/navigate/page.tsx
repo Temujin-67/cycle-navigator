@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import React, { Suspense, useMemo, useRef, useState } from "react";
+import { ThemeToggle } from "../ThemeToggle";
 import { useRouter, useSearchParams } from "next/navigation";
 
 type Phase = "Menstrual" | "Follicular" | "Ovulatory" | "Luteal" | "PMS";
@@ -509,10 +510,43 @@ function NavigateInner() {
     const d = new Date();
     const newDay1Str = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     const learnedCl = current.dayIndex;
+    try {
+      if (typeof window !== "undefined") {
+        const raw = window.localStorage.getItem("cf_cycle_history");
+        const prev = raw ? JSON.parse(raw) : [];
+        const next = [...prev, learnedCl].slice(-5);
+        window.localStorage.setItem("cf_cycle_history", JSON.stringify(next));
+        setCycleHistory(next);
+      }
+    } catch (_) {}
     router.push(
       `/navigate?age=${encodeURIComponent(age)}&day1=${encodeURIComponent(newDay1Str)}&bd=5&cl=${learnedCl}`
     );
     router.refresh();
+  }
+
+  const weekDays = useMemo(() => {
+    return Array.from({ length: 7 }, (_, i) => build(baseOffset + i));
+  }, [baseOffset, bleedOverride, cycleLength]);
+
+  const [cycleHistory, setCycleHistory] = useState<number[]>([]);
+  React.useEffect(() => {
+    try {
+      const raw = window.localStorage.getItem("cf_cycle_history");
+      setCycleHistory(raw ? JSON.parse(raw) : []);
+    } catch {
+      setCycleHistory([]);
+    }
+  }, []);
+
+  const [shareCopied, setShareCopied] = useState(false);
+  function copyWeekSummary() {
+    const lines = weekDays.map((d) => `${fmt(d.date)} · Day ${d.dayIndex} · ${d.phase} phase · Risk: ${d.risk}`);
+    const text = `Cycle Forecast – Next 7 days\n${lines.join("\n")}`;
+    if (typeof navigator !== "undefined" && navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => setShareCopied(true));
+      setTimeout(() => setShareCopied(false), 2000);
+    }
   }
 
   // --- Swipe handling (no libs) ---
@@ -591,11 +625,22 @@ function NavigateInner() {
         color: "#111",
       }}
     >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
-        <div style={{ fontSize: 22, fontWeight: 1000 as any, letterSpacing: -0.2 }}>Cycle Forecast</div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
+        <div>
+          <div style={{ fontSize: 22, fontWeight: 1000 as any, letterSpacing: -0.2 }}>Cycle Forecast</div>
+          {delta === 0 && (
+            <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 2 }}>
+              Today: {build(baseOffset).phase} phase — Risk: {build(baseOffset).risk}
+            </div>
+          )}
+        </div>
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
+          <ThemeToggle />
           <Link href="/" style={{ fontSize: 13, textDecoration: "none", fontWeight: 900 }}>
             🏠 Home
+          </Link>
+          <Link href="/about" style={{ fontSize: 13, textDecoration: "none", fontWeight: 900 }}>
+            About
           </Link>
         </div>
       </div>
@@ -679,6 +724,57 @@ function NavigateInner() {
             <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Fertile window. Highest odds.</div>
           </div>
         </div>
+        <div style={{ marginTop: 10, padding: 12, borderRadius: 12, background: "#F1FFF5", border: "1px solid #16A34A" }}>
+          <div style={{ fontSize: 11, fontWeight: 800, color: "#0B6B45", marginBottom: 4 }}>Best day to have a difficult conversation</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "#111" }}>{bestWorstRanges(bleedOverride, cycleLength).bestDays} (Follicular phase)</div>
+        </div>
+        {cycleHistory.length > 0 && (
+          <div style={{ marginTop: 10, fontSize: 11, color: "var(--text-secondary)" }}>
+            Last {cycleHistory.length} cycle{cycleHistory.length !== 1 ? "s" : ""}: {cycleHistory.join(", ")} days
+          </div>
+        )}
+      </section>
+
+      <section style={{ marginTop: 14 }}>
+        <div style={{ fontSize: 13, fontWeight: 800, marginBottom: 8 }}>Next 7 days</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+          {weekDays.map((d) => (
+            <div
+              key={d.dayIndex}
+              style={{
+                display: "flex",
+                justifyContent: "space-between",
+                alignItems: "center",
+                padding: "8px 12px",
+                borderRadius: 10,
+                border: "1px solid var(--input-border)",
+                background: "var(--background)",
+                fontSize: 13,
+              }}
+            >
+              <span style={{ fontWeight: 700 }}>{fmt(d.date)}</span>
+              <span>Day {d.dayIndex}</span>
+              <span>{d.phase} phase</span>
+              <span>Risk: {d.risk}</span>
+            </div>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={copyWeekSummary}
+          style={{
+            marginTop: 10,
+            padding: "8px 12px",
+            borderRadius: 10,
+            border: "1px solid var(--input-border)",
+            background: "var(--background)",
+            fontSize: 12,
+            fontWeight: 700,
+            cursor: "pointer",
+          }}
+        >
+          {shareCopied ? "Copied!" : "Copy week summary"}
+        </button>
       </section>
 
       {showBleedQuestion && (

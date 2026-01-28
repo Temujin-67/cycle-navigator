@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
+import { ThemeToggle } from "./ThemeToggle";
 
 const DEFAULT_CYCLE_LENGTH = 28;
 const DEFAULT_BLEED_DAYS = 5;
@@ -34,9 +35,12 @@ export default function HomePage() {
         color: "var(--foreground)",
       }}
     >
-      <h1 style={{ fontSize: "1.75rem", fontWeight: 700, marginBottom: "0.5rem", letterSpacing: "-0.02em" }}>
-        Cycle Forecast
-      </h1>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
+        <h1 style={{ fontSize: "1.75rem", fontWeight: 700, margin: 0, letterSpacing: "-0.02em" }}>
+          Cycle Forecast
+        </h1>
+        <ThemeToggle />
+      </div>
 
       <p style={{ fontSize: "0.9375rem", color: "var(--text-secondary)", lineHeight: 1.45, marginBottom: "1.5rem" }}>
         Hormonal cycle patterns. Fewer arguments, better relationship. Individual responses differ.
