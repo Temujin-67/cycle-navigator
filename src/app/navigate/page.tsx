@@ -18,7 +18,7 @@ type DayInfo = {
   stress: string;
   communication: string;
 
-  play: string; // NEW: replaces Focus + Helps
+  play: string; // replaces Focus + Helps
   avoid: string;
 
   fertility: string;
@@ -53,7 +53,7 @@ function startOfDay(d: Date) {
 }
 
 function pick(lines: string[], dayIndex: number, salt: number, viewSalt: number) {
-  // deterministic daily variation + viewSalt (so adjacent days never repeat)
+  // Deterministic variation: dayIndex + field salt + view salt (changes as you swipe)
   const idx = (dayIndex * 7 + salt * 13 + viewSalt * 19) % lines.length;
   return lines[idx];
 }
@@ -83,6 +83,7 @@ function riskFor(phase: Phase): RiskLevel {
 }
 
 function ovulationMeta(dayIndex: number) {
+  // Default 28-day model: ovulation peak ~14, fertile window ~12–15
   const peak = Math.round(DEFAULTS.cycleLength / 2); // 14
   const fertileStart = peak - 2; // 12
   const fertileEnd = peak + 1; // 15
@@ -102,8 +103,37 @@ function fertilityLine(dayIndex: number) {
   return "Lower odds today (relative to fertile window).";
 }
 
+// --- Dynamic emoji resolvers (meaning-based) ---
+function moodEmoji(text: string) {
+  const t = text.toLowerCase();
+  if (t.includes("smooth") || t.includes("even") || t.includes("normal") || t.includes("less friction")) return "🙂";
+  if (t.includes("irritate") || t.includes("limited") || t.includes("sharp") || t.includes("less margin")) return "😑";
+  if (t.includes("variable") || t.includes("serious") || t.includes("annoyed")) return "😐";
+  return "😐";
+}
+
+function libidoEmoji(text: string) {
+  const t = text.toLowerCase();
+  // very low / off
+  if (t.includes("off") || t.includes("not a sexual") || t.includes("basically off") || t.includes("low interest"))
+    return "🚫";
+  // warming / moderate
+  if (t.includes("warming") || t.includes("spark") || t.includes("flirt")) return "🔥";
+  // high / peak
+  if (t.includes("higher") || t.includes("clearly higher") || t.includes("obvious") || t.includes("peak")) return "🔥🔥";
+  // default neutral
+  return "❄️";
+}
+
+function stressEmoji(text: string) {
+  const t = text.toLowerCase();
+  if (t.includes("explode") || t.includes("thin") || t.includes("sharp") || t.includes("short fuse")) return "🔴";
+  if (t.includes("buffer") || t.includes("tolerance") || t.includes("less likely") || t.includes("lower friction")) return "🟢";
+  return "🟠";
+}
+
 function copyFor(phase: Phase, dayIndex: number, viewSalt: number) {
-  // Tight, non-redundant: Mood / Libido / Stress / Communication / Play / Avoid
+  // Banks: Mood / Libido / Stress / Communication / Play / Avoid
   if (phase === "Follicular") {
     return {
       mood: pick(
@@ -131,13 +161,13 @@ function copyFor(phase: Phase, dayIndex: number, viewSalt: number) {
         viewSalt
       ),
       play: pick(
-        ["Make plans and stick to them.", "Decide once and move on.", "Do the practical stuff today."],
+        ["Do the practical stuff today.", "Decide once and move on.", "Make the plan and follow it."],
         dayIndex,
         16,
         viewSalt
       ),
       avoid: pick(
-        ["Picking at small issues.", "Starting unnecessary tension.", "Turning small stuff into a topic."],
+        ["Starting unnecessary tension.", "Picking at small issues.", "Turning small stuff into a topic."],
         dayIndex,
         18,
         viewSalt
@@ -172,13 +202,13 @@ function copyFor(phase: Phase, dayIndex: number, viewSalt: number) {
         viewSalt
       ),
       play: pick(
-        ["Be present. That’s the whole move.", "Put in effort without trying too hard.", "Show up properly today."],
+        ["Show up properly today.", "Be present. That’s the whole move.", "Put effort in — without trying too hard."],
         dayIndex,
         26,
         viewSalt
       ),
       avoid: pick(
-        ["Forcing escalation.", "Trying too hard.", "Making it heavy."],
+        ["Making it heavy.", "Trying too hard.", "Forcing escalation."],
         dayIndex,
         28,
         viewSalt
@@ -201,7 +231,7 @@ function copyFor(phase: Phase, dayIndex: number, viewSalt: number) {
         viewSalt
       ),
       stress: pick(
-        ["Little patience for friction.", "Stress builds quickly.", "Short fuse potential."],
+        ["Stress builds quickly.", "Little patience for friction.", "Short fuse potential."],
         dayIndex,
         34,
         viewSalt
@@ -213,13 +243,13 @@ function copyFor(phase: Phase, dayIndex: number, viewSalt: number) {
         viewSalt
       ),
       play: pick(
-        ["Keep it contained. Handle essentials only.", "Do the basics and don’t create extra work.", "Keep the day simple and steady."],
+        ["Handle essentials only. Everything else can wait.", "Do the basics and don’t create extra work.", "Keep the day simple and steady."],
         dayIndex,
         36,
         viewSalt
       ),
       avoid: pick(
-        ["Opening issues you can’t finish today.", "Starting big talks.", "Pushing decisions."],
+        ["Starting big talks.", "Pushing decisions.", "Opening issues you can’t finish today."],
         dayIndex,
         38,
         viewSalt
@@ -236,7 +266,7 @@ function copyFor(phase: Phase, dayIndex: number, viewSalt: number) {
         viewSalt
       ),
       libido: pick(
-        ["More inconsistent than peak days.", "Still there, less central.", "More mood-dependent."],
+        ["More mood-dependent.", "Still there, less central.", "More inconsistent than peak days."],
         dayIndex,
         42,
         viewSalt
@@ -295,7 +325,7 @@ function copyFor(phase: Phase, dayIndex: number, viewSalt: number) {
       viewSalt
     ),
     play: pick(
-      ["Reduce friction. Keep it calm.", "Prevent damage. Keep it simple.", "Handle basics and don’t poke."],
+      ["Handle basics and don’t poke.", "Reduce friction. Keep it calm.", "Prevent damage. Keep it simple."],
       dayIndex,
       56,
       viewSalt
@@ -310,12 +340,12 @@ function copyFor(phase: Phase, dayIndex: number, viewSalt: number) {
 }
 
 function PhaseChip({ phase }: { phase: Phase }) {
-  const m: Record<Phase, { bg: string; border: string; emoji: string }> = {
-    Menstrual: { bg: "#FFF1F5", border: "#FF3B7B", emoji: "🩸" },
-    Follicular: { bg: "#F1FFF5", border: "#16A34A", emoji: "🌱" },
-    Ovulatory: { bg: "#FFF7E6", border: "#F59E0B", emoji: "🔥" },
-    Luteal: { bg: "#EEF7FF", border: "#2563EB", emoji: "🧠" },
-    PMS: { bg: "#FFECEC", border: "#EF4444", emoji: "⚡" },
+  const m: Record<Phase, { border: string; emoji: string }> = {
+    Menstrual: { border: "#FF3B7B", emoji: "🩸" },
+    Follicular: { border: "#16A34A", emoji: "🌱" },
+    Ovulatory: { border: "#F59E0B", emoji: "🔥" },
+    Luteal: { border: "#2563EB", emoji: "🧠" },
+    PMS: { border: "#EF4444", emoji: "⚡" },
   };
 
   const s = m[phase];
@@ -380,7 +410,7 @@ function DayCard({ d }: { d: DayInfo }) {
 
   const row = (emoji: string, label: string, value: string) => (
     <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-      <div style={{ width: 24, textAlign: "center", fontSize: 16 }}>{emoji}</div>
+      <div style={{ width: 26, textAlign: "center", fontSize: 16 }}>{emoji}</div>
       <div style={{ flex: 1 }}>
         <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: 0.2, color: "#111" }}>{label}</div>
         <div style={{ fontSize: 15, lineHeight: 1.35, color: "#111", marginTop: 2 }}>{value}</div>
@@ -411,9 +441,9 @@ function DayCard({ d }: { d: DayInfo }) {
       </div>
 
       <div style={{ marginTop: 14, display: "grid", gap: 12 }}>
-        {row("🙂", "Mood", d.mood)}
-        {row("🔥", "Libido", d.libido)}
-        {row("🧯", "Stress", d.stress)}
+        {row(moodEmoji(d.mood), "Mood", d.mood)}
+        {row(libidoEmoji(d.libido), "Libido", d.libido)}
+        {row(stressEmoji(d.stress), "Stress", d.stress)}
         {row("💬", "Communication", d.communication)}
         {row("▶️", "Play", d.play)}
         {row("🚫", "Avoid", d.avoid)}
@@ -421,7 +451,7 @@ function DayCard({ d }: { d: DayInfo }) {
       </div>
 
       <div style={{ marginTop: 14, fontSize: 12, color: "#444", lineHeight: 1.35 }}>
-        Pattern-based. Individual responses may differ.
+        Educational pattern-based view. Individual responses may differ.
       </div>
     </section>
   );
@@ -446,9 +476,8 @@ function NavigateInner() {
     return Math.max(0, Math.floor((a - b) / 86400000));
   }, [today, day1]);
 
-  // swipeable offset (0 = today)
+  // Swipeable delta (0 = today)
   const [delta, setDelta] = useState(0);
-
   const viewOffset = baseOffset + delta;
 
   const build = (o: number, viewSalt: number): DayInfo => {
@@ -461,10 +490,10 @@ function NavigateInner() {
     return { date, dayIndex, phase, risk, fertility, ...c };
   };
 
-  const current = useMemo(() => build(viewOffset, delta + 100), [viewOffset, delta, bleedOverride]); // viewSalt shifts with delta
+  const current = useMemo(() => build(viewOffset, delta + 100), [viewOffset, delta, bleedOverride]);
 
   // Day 8 prompt: period theoretically over (7 days); ask if still going
-  const showBleedQuestion = !dismissBleedPrompt && current.dayIndex === (DEFAULTS.bleedDays + 1);
+  const showBleedQuestion = !dismissBleedPrompt && current.dayIndex === DEFAULTS.bleedDays + 1;
 
   const qpBase = `age=${encodeURIComponent(age)}&day1=${encodeURIComponent(day1Str)}`;
 
@@ -476,7 +505,6 @@ function NavigateInner() {
   const drag = useRef({
     active: false,
     startX: 0,
-    lastX: 0,
     dx: 0,
   });
 
@@ -486,21 +514,18 @@ function NavigateInner() {
     (e.currentTarget as HTMLDivElement).setPointerCapture(e.pointerId);
     drag.current.active = true;
     drag.current.startX = e.clientX;
-    drag.current.lastX = e.clientX;
     drag.current.dx = 0;
     setDragPx(0);
   };
 
   const onPointerMove = (e: React.PointerEvent) => {
     if (!drag.current.active) return;
-    const x = e.clientX;
-    const dx = x - drag.current.startX;
-    drag.current.lastX = x;
+    const dx = e.clientX - drag.current.startX;
     drag.current.dx = dx;
     setDragPx(dx);
   };
 
-  const onPointerUp = () => {
+  const onPointerEnd = () => {
     if (!drag.current.active) return;
     drag.current.active = false;
 
@@ -594,8 +619,8 @@ function NavigateInner() {
         <div
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onPointerCancel={onPointerUp}
+          onPointerUp={onPointerEnd}
+          onPointerCancel={onPointerEnd}
           style={{
             touchAction: "pan-y",
             transform: `translateX(${dragPx}px)`,
@@ -605,7 +630,6 @@ function NavigateInner() {
           <DayCard d={current} />
         </div>
 
-        {/* tiny controls as backup (still phone-friendly) */}
         <div style={{ display: "flex", justifyContent: "space-between", gap: 10, marginTop: 10 }}>
           <button
             onClick={() => setDelta((v) => Math.max(v - 1, -baseOffset))}
