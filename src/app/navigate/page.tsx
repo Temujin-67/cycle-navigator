@@ -446,7 +446,7 @@ function DayCard({ d }: { d: DayInfo }) {
       </div>
 
       <div style={{ marginTop: 14, fontSize: 12, color: "#444", lineHeight: 1.35 }}>
-        <strong>Disclaimer:</strong> For informational use only. Not for contraception or medical decisions. Pattern-based. Individual responses differ. Not medical advice. Consult a healthcare provider for health decisions.
+        <strong><Link href="/disclaimer" style={{ color: "inherit", textDecoration: "underline" }}>Disclaimer</Link>:</strong> For informational use only. Not for contraception or medical decisions. Pattern-based. Individual responses differ. Not medical advice. Consult a healthcare provider for health decisions.
       </div>
     </section>
   );

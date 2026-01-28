@@ -1,0 +1,17 @@
+{
+  "name": "Cycle Forecast",
+  "short_name": "Cycle Forecast",
+  "description": "Know her cycle phase. Best and worst days for conversations, libido, pregnancy.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#16A34A",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "any",
+      "type": "image/x-icon",
+      "purpose": "any"
+    }
+  ]
+}

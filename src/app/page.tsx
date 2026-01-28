@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { ThemeToggle } from "./ThemeToggle";
@@ -264,7 +265,7 @@ export default function HomePage() {
       )}
 
       <p style={{ marginTop: "1.5rem", fontSize: "0.8125rem", color: "var(--text-secondary)", lineHeight: 1.4 }}>
-        <strong>Disclaimer:</strong> For informational use only. Not for contraception or medical decisions. Not medical advice. Consult a healthcare provider for health decisions.
+        <strong>Disclaimer:</strong> For informational use only. Not for contraception or medical decisions. Not medical advice. Consult a healthcare provider for health decisions. <Link href="/disclaimer" style={{ fontWeight: 600, textDecoration: "underline" }}>Full disclaimer &amp; terms</Link>
       </p>
     </main>
   );

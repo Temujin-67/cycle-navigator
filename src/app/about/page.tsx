@@ -42,6 +42,9 @@ export default function AboutPage() {
         The app is for <b>understanding</b>, not control. Don&apos;t use it to make assumptions or decisions without
         talking to your partner.
       </p>
+      <p style={{ marginTop: "1rem" }}>
+        <Link href="/disclaimer" style={{ fontSize: 14, fontWeight: 700 }}>Full disclaimer &amp; terms of use →</Link>
+      </p>
     </main>
   );
 }
