@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { Suspense, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 
 type Phase = "Menstrual" | "Follicular" | "Ovulatory" | "Luteal" | "PMS";
@@ -36,7 +36,6 @@ function addDays(d: Date, n: number) {
   return x;
 }
 
-// DD MM YYYY
 function fmt(d: Date) {
   const dd = String(d.getDate()).padStart(2, "0");
   const mm = String(d.getMonth() + 1).padStart(2, "0");
@@ -70,12 +69,11 @@ function phaseForDay(dayIndex: number): Phase {
   return "Follicular";
 }
 
-// ✅ typed RiskLevel literals
 function riskFor(phase: Phase): { risk: RiskLevel; riskNote: string } {
-  if (phase === "PMS") return { risk: "High sensitivity", riskNote: "Emotions may spike faster." };
-  if (phase === "Menstrual") return { risk: "Be mindful", riskNote: "Lower energy and tolerance." };
+  if (phase === "PMS") return { risk: "High sensitivity", riskNote: "Small stuff can blow up faster." };
+  if (phase === "Menstrual") return { risk: "Be mindful", riskNote: "Lower energy + lower patience is common." };
   if (phase === "Luteal") return { risk: "Be mindful", riskNote: "More variability possible." };
-  return { risk: "Low friction", riskNote: "Generally easier interaction window." };
+  return { risk: "Low friction", riskNote: "Often smoother days." };
 }
 
 function startOfDay(d: Date) {
@@ -90,8 +88,27 @@ function pick(lines: string[], dayIndex: number, salt: number) {
 }
 
 function ovulationPeakDayIndex() {
-  // default cycle assumption (28 days) → peak day ~14
-  return Math.round(DEFAULTS.cycleLength / 2);
+  return Math.round(DEFAULTS.cycleLength / 2); // 14
+}
+
+function phaseMeta(phase: Phase) {
+  const meta: Record<
+    Phase,
+    { emoji: string; bg: string; border: string; pillBg: string; pillFg: string }
+  > = {
+    Menstrual: { emoji: "🩸", bg: "linear-gradient(180deg, #FFF3F7 0%, #FFFFFF 100%)", border: "#FF4D7D", pillBg: "#FFE0EA", pillFg: "#9B1035" },
+    Follicular: { emoji: "🌱", bg: "linear-gradient(180deg, #F1FFF5 0%, #FFFFFF 100%)", border: "#19C37D", pillBg: "#DFFBEA", pillFg: "#0B6B45" },
+    Ovulatory: { emoji: "🔥", bg: "linear-gradient(180deg, #FFF7E6 0%, #FFFFFF 100%)", border: "#FFB020", pillBg: "#FFEBC2", pillFg: "#7A4B00" },
+    Luteal: { emoji: "🧠", bg: "linear-gradient(180deg, #EEF7FF 0%, #FFFFFF 100%)", border: "#1E88E5", pillBg: "#D8ECFF", pillFg: "#0B4A84" },
+    PMS: { emoji: "⚡", bg: "linear-gradient(180deg, #FFEFF1 0%, #FFFFFF 100%)", border: "#FF3B30", pillBg: "#FFD6D3", pillFg: "#7F1D1D" },
+  };
+  return meta[phase];
+}
+
+function riskBadge(risk: RiskLevel) {
+  if (risk === "Low friction") return { label: "GREEN", bg: "#E8FFF1", fg: "#0B6B45", border: "#19C37D", emoji: "🟢" };
+  if (risk === "Be mindful") return { label: "AMBER", bg: "#FFF6E5", fg: "#7A4B00", border: "#FFB020", emoji: "🟠" };
+  return { label: "RED", bg: "#FFECEC", fg: "#7F1D1D", border: "#FF3B30", emoji: "🔴" };
 }
 
 function copy(phase: Phase, age: number, dayIndex: number) {
@@ -99,14 +116,14 @@ function copy(phase: Phase, age: number, dayIndex: number) {
 
   if (phase === "Menstrual")
     return {
-      mood: `More inward, comfort-seeking. Variability is ${t.variability}.`,
-      libido: "Often lower; closeness can be more comfort-focused.",
-      energy: "Lower energy is common.",
-      stress: `Lower tolerance is common. Sensitivity is ${t.sensitivity}.`,
-      communication: "Gentle tone; keep questions simple; no pressure.",
-      partnerFocus: "Support and comfort first.",
-      helps: "Warmth, reassurance, practical help.",
-      avoid: "Pushing decisions, surprise debates.",
+      mood: `Softer day for many. Variability: ${t.variability}.`,
+      libido: "Usually lower; comfort-style closeness fits better.",
+      energy: "Energy often lower.",
+      stress: `Smaller buffer is common. Sensitivity: ${t.sensitivity}.`,
+      communication: "Keep it short, calm, and non-pushy.",
+      partnerFocus: "Low pressure, low drama.",
+      helps: "Practical help + steady tone.",
+      avoid: "Surprise debates, pushing decisions.",
     };
 
   if (phase === "Ovulatory") {
@@ -135,12 +152,12 @@ function copy(phase: Phase, age: number, dayIndex: number) {
     ];
 
     return {
-      mood: `Often more open and expressive. Variability is ${t.variability}.`,
+      mood: `More open day for many. Variability: ${t.variability}.`,
       libido: peak ? pick(libidoPeak, dayIndex, 2) : pick(libidoNormal, dayIndex, 2),
-      energy: "Higher drive is more likely.",
-      stress: "Tolerance is often stronger.",
-      communication: "Clear, warm, direct. Don’t overtalk it.",
-      partnerFocus: "This is usually an easier day to reconnect.",
+      energy: "More drive is common.",
+      stress: "Often more resilient today.",
+      communication: "Light + direct works best. Don’t overtalk it.",
+      partnerFocus: "Easy day to reconnect.",
       helps: "Be present. Keep it natural.",
       avoid: "Pushing, assumptions, making it heavy.",
     };
@@ -148,42 +165,41 @@ function copy(phase: Phase, age: number, dayIndex: number) {
 
   if (phase === "Luteal")
     return {
-      mood: `More serious or reflective. Variability is ${t.variability}.`,
+      mood: `More variable day-to-day. Variability: ${t.variability}.`,
       libido: "Often moderate then trending down.",
       energy: "Steady but not peak.",
-      stress: `Sensitivity can rise gradually. Sensitivity is ${t.sensitivity}.`,
-      communication: "Be clear; keep requests specific.",
-      partnerFocus: "Predictability and calm.",
-      helps: "Routine, clarity, reassurance.",
-      avoid: "Last-minute changes, vague expectations.",
+      stress: `Sensitivity can rise. Sensitivity: ${t.sensitivity}.`,
+      communication: "Clear and specific beats long talks.",
+      partnerFocus: "Predictability wins.",
+      helps: "Plan early, keep it simple.",
+      avoid: "Last-minute changes, vague requests.",
     };
 
   if (phase === "PMS")
     return {
-      mood: `More sensitive day-to-day. Variability is ${t.variability}.`,
+      mood: `Higher sensitivity window for many. Variability: ${t.variability}.`,
       libido: "Often lower or inconsistent.",
-      energy: "Lower energy is common.",
-      stress: `Reactivity can be higher. Sensitivity is ${t.sensitivity}.`,
-      communication: "Keep it calm; don’t turn it into a debate.",
-      partnerFocus: "Make the day simpler, not bigger.",
-      helps: "Low pressure, steady tone.",
-      avoid: "Debates, criticism, pushing decisions.",
+      energy: "Energy often lower.",
+      stress: `Reactivity can be higher. Sensitivity: ${t.sensitivity}.`,
+      communication: "Don’t debate. De-escalate early.",
+      partnerFocus: "Keep the day smaller, not bigger.",
+      helps: "Low pressure + steady tone.",
+      avoid: "Criticism, pushing decisions, sarcasm.",
     };
 
-  // Follicular
   return {
-    mood: `Often stable and clear. Variability is ${t.variability}.`,
+    mood: `Often steadier days. Variability: ${t.variability}.`,
     libido: "Often rising gradually.",
     energy: "Energy usually improving.",
-    stress: "Resilience is often better.",
-    communication: "Collaborative and direct.",
-    partnerFocus: "Good day for plans and normal conversations.",
-    helps: "Clear plans, follow-through.",
+    stress: "Often better buffer today.",
+    communication: "Good day for practical chats.",
+    partnerFocus: "Plans and progress.",
+    helps: "Clear plan + follow-through.",
     avoid: "Unnecessary tension.",
   };
 }
 
-export default function NavigateClient() {
+function NavigateInner() {
   const sp = useSearchParams();
   const age = Number(sp.get("age") || 0);
   const day1Str = sp.get("day1") || "";
@@ -206,63 +222,123 @@ export default function NavigateClient() {
     return { date, dayIndex, phase, ...risk, ...c };
   };
 
-  const todayInfo = build(offset < 0 ? 0 : offset);
-  const tomorrowInfo = build((offset < 0 ? 0 : offset) + 1);
+  const safeOffset = offset < 0 ? 0 : offset;
+  const todayInfo = build(safeOffset);
+  const tomorrowInfo = build(safeOffset + 1);
 
   return (
-    <main style={{ maxWidth: 720, margin: "40px auto", padding: 20, fontFamily: "system-ui" }}>
-      <h1 style={{ marginTop: 0 }}>Day View</h1>
+    <main style={{ maxWidth: 900, margin: "28px auto", padding: 18, fontFamily: "system-ui", color: "#111" }}>
+      <h1 style={{ marginTop: 0, marginBottom: 6, fontSize: 28, letterSpacing: -0.2 }}>Day View 🧭</h1>
 
-      <div style={{ fontSize: 13, color: "#444", marginBottom: 14 }}>
-        Built on hormonal cycle patterns. Individual responses may differ. Real life always overrides predictions.
+      <div style={{ fontSize: 12, color: "#555", lineHeight: 1.45 }}>
+        Built on hormonal cycle patterns (education-only). Individual responses may differ. Real life always overrides predictions.
       </div>
 
-      {[{ label: "TODAY", d: todayInfo }, { label: "TOMORROW", d: tomorrowInfo }].map(({ label, d }) => (
-        <section
-          key={label}
-          style={{ border: "1px solid #e6e6e6", borderRadius: 12, padding: 14, background: "#fff", marginTop: 14 }}
-        >
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 12 }}>
-            <strong>{label}</strong>
-            <span style={{ color: "#666", fontSize: 13 }}>{fmt(d.date)}</span>
-          </div>
+      {[{ label: "TODAY", d: todayInfo }, { label: "TOMORROW", d: tomorrowInfo }].map(({ label, d }) => {
+        const meta = phaseMeta(d.phase);
+        const rb = riskBadge(d.risk);
 
-          <div style={{ marginTop: 10, fontWeight: 700 }}>
-            Day {d.dayIndex} — {d.phase}
-          </div>
+        return (
+          <section
+            key={label}
+            style={{
+              borderRadius: 18,
+              padding: 16,
+              background: meta.bg,
+              marginTop: 14,
+              border: "1px solid #eee",
+              boxShadow: "0 1px 0 rgba(0,0,0,0.04)",
+              position: "relative",
+              overflow: "hidden",
+            }}
+          >
+            <div style={{ position: "absolute", left: 0, top: 0, bottom: 0, width: 7, background: meta.border }} />
 
-          <div style={{ marginTop: 8, fontSize: 13, color: "#444" }}>
-            <b>Relationship risk:</b> {d.risk}. {d.riskNote}
-          </div>
+            <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "baseline" }}>
+              <strong style={{ fontSize: 13, letterSpacing: 0.4, paddingLeft: 8 }}>{label}</strong>
+              <span style={{ color: "#666", fontSize: 13 }}>{fmt(d.date)}</span>
+            </div>
 
-          <div style={{ marginTop: 10, display: "grid", gap: 8, fontSize: 14, lineHeight: 1.35 }}>
-            <div>
-              <b>Mood:</b> {d.mood}
+            <div style={{ marginTop: 10, paddingLeft: 8, display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "8px 10px",
+                  borderRadius: 999,
+                  background: meta.pillBg,
+                  color: meta.pillFg,
+                  fontSize: 12,
+                  fontWeight: 800,
+                  border: `1px solid ${meta.border}`,
+                }}
+              >
+                <span aria-hidden="true">{meta.emoji}</span>
+                <span>
+                  Day {d.dayIndex} — {d.phase}
+                </span>
+              </span>
+
+              <span
+                style={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  gap: 8,
+                  padding: "8px 10px",
+                  borderRadius: 999,
+                  background: rb.bg,
+                  color: rb.fg,
+                  fontSize: 12,
+                  fontWeight: 800,
+                  border: `1px solid ${rb.border}`,
+                }}
+                title={d.riskNote}
+              >
+                <span aria-hidden="true">{rb.emoji}</span>
+                <span>{rb.label}</span>
+                <span style={{ fontWeight: 700, opacity: 0.9 }}>Risk: {d.risk}</span>
+              </span>
             </div>
-            <div>
-              <b>Libido:</b> {d.libido}
+
+            <div style={{ marginTop: 12, display: "grid", gap: 10, fontSize: 14, lineHeight: 1.35, paddingLeft: 8 }}>
+              <div>
+                <b>🙂 Mood:</b> {d.mood}
+              </div>
+              <div>
+                <b>🔥 Libido:</b> {d.libido}
+              </div>
+              <div>
+                <b>⚡ Energy:</b> {d.energy}
+              </div>
+              <div>
+                <b>🧯 Stress response:</b> {d.stress}
+              </div>
+              <div>
+                <b>💬 Communication:</b> {d.communication}
+              </div>
+              <div>
+                <b>🎯 Partner focus:</b> {d.partnerFocus}
+              </div>
+              <div>
+                <b>✅ What helps:</b> {d.helps}
+              </div>
+              <div>
+                <b>🚫 What to avoid:</b> {d.avoid}
+              </div>
             </div>
-            <div>
-              <b>Energy:</b> {d.energy}
-            </div>
-            <div>
-              <b>Stress response:</b> {d.stress}
-            </div>
-            <div>
-              <b>Communication:</b> {d.communication}
-            </div>
-            <div>
-              <b>Partner focus:</b> {d.partnerFocus}
-            </div>
-            <div>
-              <b>What helps:</b> {d.helps}
-            </div>
-            <div>
-              <b>What to avoid:</b> {d.avoid}
-            </div>
-          </div>
-        </section>
-      ))}
+          </section>
+        );
+      })}
     </main>
+  );
+}
+
+export default function Page() {
+  // ✅ Required by Next.js: useSearchParams must be inside a Suspense boundary.
+  return (
+    <Suspense fallback={<div style={{ maxWidth: 900, margin: "28px auto", padding: 18, fontFamily: "system-ui" }}>Loading…</div>}>
+      <NavigateInner />
+    </Suspense>
   );
 }
