@@ -1,14 +1,14 @@
 "use client";
 
-import { Suspense, useMemo } from "react";
-import { useSearchParams } from "next/navigation";
+import { Suspense, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 type Phase = "Menstrual" | "Follicular" | "Ovulatory" | "Luteal" | "PMS";
 type RiskLevel = "Low friction" | "Be mindful" | "High sensitivity";
 
 type DayInfo = {
   date: Date;
-  dayIndex: number;
+  dayIndex: number; // 1.. (can go beyond 28 if cycle hasn't restarted)
   phase: Phase;
   risk: RiskLevel;
   riskNote: string;
@@ -36,11 +36,18 @@ function addDays(d: Date, n: number) {
   return x;
 }
 
+// DD MM YYYY
 function fmt(d: Date) {
   const dd = String(d.getDate()).padStart(2, "0");
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const yyyy = d.getFullYear();
   return `${dd} ${mm} ${yyyy}`;
+}
+
+function isoDate(d: Date) {
+  const x = new Date(d);
+  x.setHours(12, 0, 0, 0);
+  return x.toISOString().slice(0, 10);
 }
 
 function clamp(n: number, a: number, b: number) {
@@ -56,16 +63,21 @@ function ageTone(age: number) {
 
 function phaseForDay(dayIndex: number): Phase {
   const { cycleLength, bleedDays, pmsDays, ovulationWindow } = DEFAULTS;
+
+  // If the cycle hasn't restarted and we're past the "standard" length,
+  // we keep the phase pinned to PMS as a safe, non-predictive extension.
+  const idx = Math.min(dayIndex, cycleLength);
+
   const ovCenter = Math.round(cycleLength / 2);
   const ovHalf = Math.floor(ovulationWindow / 2);
   const ovStart = ovCenter - ovHalf;
   const ovEnd = ovCenter + ovHalf;
   const pmsStart = cycleLength - pmsDays + 1;
 
-  if (dayIndex <= bleedDays) return "Menstrual";
-  if (dayIndex >= ovStart && dayIndex <= ovEnd) return "Ovulatory";
-  if (dayIndex >= pmsStart) return "PMS";
-  if (dayIndex > ovEnd && dayIndex < pmsStart) return "Luteal";
+  if (idx <= bleedDays) return "Menstrual";
+  if (idx >= ovStart && idx <= ovEnd) return "Ovulatory";
+  if (idx >= pmsStart) return "PMS";
+  if (idx > ovEnd && idx < pmsStart) return "Luteal";
   return "Follicular";
 }
 
@@ -92,10 +104,7 @@ function ovulationPeakDayIndex() {
 }
 
 function phaseMeta(phase: Phase) {
-  const meta: Record<
-    Phase,
-    { emoji: string; bg: string; border: string; pillBg: string; pillFg: string }
-  > = {
+  const meta: Record<Phase, { emoji: string; bg: string; border: string; pillBg: string; pillFg: string }> = {
     Menstrual: { emoji: "🩸", bg: "linear-gradient(180deg, #FFF3F7 0%, #FFFFFF 100%)", border: "#FF4D7D", pillBg: "#FFE0EA", pillFg: "#9B1035" },
     Follicular: { emoji: "🌱", bg: "linear-gradient(180deg, #F1FFF5 0%, #FFFFFF 100%)", border: "#19C37D", pillBg: "#DFFBEA", pillFg: "#0B6B45" },
     Ovulatory: { emoji: "🔥", bg: "linear-gradient(180deg, #FFF7E6 0%, #FFFFFF 100%)", border: "#FFB020", pillBg: "#FFEBC2", pillFg: "#7A4B00" },
@@ -200,9 +209,12 @@ function copy(phase: Phase, age: number, dayIndex: number) {
 }
 
 function NavigateInner() {
+  const router = useRouter();
   const sp = useSearchParams();
   const age = Number(sp.get("age") || 0);
   const day1Str = sp.get("day1") || "";
+
+  const [dismissedCyclePrompt, setDismissedCyclePrompt] = useState(false);
 
   const day1 = useMemo(() => new Date(day1Str + "T12:00:00"), [day1Str]);
   const today = useMemo(() => new Date(), []);
@@ -215,16 +227,23 @@ function NavigateInner() {
 
   const build = (o: number): DayInfo => {
     const date = addDays(day1, o);
-    const dayIndex = (o % DEFAULTS.cycleLength) + 1;
-    const phase = phaseForDay(dayIndex);
+    const rawDayIndex = o + 1; // IMPORTANT: can go past 28 for irregular cycles
+    const phase = phaseForDay(rawDayIndex);
     const risk = riskFor(phase);
-    const c = copy(phase, age, dayIndex);
-    return { date, dayIndex, phase, ...risk, ...c };
+    const c = copy(phase, age, Math.min(rawDayIndex, DEFAULTS.cycleLength));
+    return { date, dayIndex: rawDayIndex, phase, ...risk, ...c };
   };
 
   const safeOffset = offset < 0 ? 0 : offset;
   const todayInfo = build(safeOffset);
   const tomorrowInfo = build(safeOffset + 1);
+
+  const showCyclePrompt = !dismissedCyclePrompt && todayInfo.dayIndex > DEFAULTS.cycleLength;
+
+  function restartCycleFrom(date: Date) {
+    const newDay1 = isoDate(date);
+    router.push(`/navigate?age=${encodeURIComponent(String(age || ""))}&day1=${encodeURIComponent(newDay1)}`);
+  }
 
   return (
     <main style={{ maxWidth: 900, margin: "28px auto", padding: 18, fontFamily: "system-ui", color: "#111" }}>
@@ -233,6 +252,55 @@ function NavigateInner() {
       <div style={{ fontSize: 12, color: "#555", lineHeight: 1.45 }}>
         Built on hormonal cycle patterns (education-only). Individual responses may differ. Real life always overrides predictions.
       </div>
+
+      {showCyclePrompt && (
+        <section
+          style={{
+            marginTop: 14,
+            borderRadius: 16,
+            padding: 14,
+            border: "1px solid #ddd",
+            background: "linear-gradient(180deg, #FFF 0%, #F7F7F7 100%)",
+          }}
+        >
+          <div style={{ fontWeight: 800, marginBottom: 6 }}>⏳ Past the “standard” 28 days</div>
+          <div style={{ fontSize: 13, color: "#444", lineHeight: 1.35 }}>
+            Some cycles run long. Quick check: <b>has a new cycle started?</b>
+          </div>
+
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
+            <button
+              onClick={() => restartCycleFrom(todayInfo.date)}
+              style={{
+                border: "1px solid #111",
+                background: "#111",
+                color: "#fff",
+                padding: "10px 12px",
+                borderRadius: 12,
+                fontWeight: 800,
+                cursor: "pointer",
+              }}
+            >
+              ✅ Yes — restart from today
+            </button>
+
+            <button
+              onClick={() => setDismissedCyclePrompt(true)}
+              style={{
+                border: "1px solid #ddd",
+                background: "#fff",
+                color: "#111",
+                padding: "10px 12px",
+                borderRadius: 12,
+                fontWeight: 800,
+                cursor: "pointer",
+              }}
+            >
+              ❌ Not yet
+            </button>
+          </div>
+        </section>
+      )}
 
       {[{ label: "TODAY", d: todayInfo }, { label: "TOMORROW", d: tomorrowInfo }].map(({ label, d }) => {
         const meta = phaseMeta(d.phase);
@@ -276,7 +344,8 @@ function NavigateInner() {
               >
                 <span aria-hidden="true">{meta.emoji}</span>
                 <span>
-                  Day {d.dayIndex} — {d.phase}
+                  Day {d.dayIndex}
+                  {d.dayIndex > DEFAULTS.cycleLength ? " (late)" : ""} — {d.phase}
                 </span>
               </span>
 
@@ -335,9 +404,10 @@ function NavigateInner() {
 }
 
 export default function Page() {
-  // ✅ Required by Next.js: useSearchParams must be inside a Suspense boundary.
   return (
-    <Suspense fallback={<div style={{ maxWidth: 900, margin: "28px auto", padding: 18, fontFamily: "system-ui" }}>Loading…</div>}>
+    <Suspense
+      fallback={<div style={{ maxWidth: 900, margin: "28px auto", padding: 18, fontFamily: "system-ui" }}>Loading…</div>}
+    >
       <NavigateInner />
     </Suspense>
   );
