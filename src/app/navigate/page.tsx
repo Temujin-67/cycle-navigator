@@ -474,13 +474,14 @@ function NavigateInner() {
     setDismissBleedPrompt(false);
   }, [day1Str]);
 
-  // On mount, read "Not yet" date from localStorage so prompt shows again on a different calendar day
+  // Per-cycle "Not yet" date: read from localStorage key for this cycle so new cycle gets empty key and prompt shows
+  const newPeriodDismissedKey = `cf_new_period_dismissed_${day1Str}`;
   React.useEffect(() => {
     try {
-      const stored = typeof window !== "undefined" ? window.localStorage.getItem("cf_new_period_dismissed_date") : null;
-      if (stored) setLastNewPeriodDismissedDate(stored);
+      const stored = typeof window !== "undefined" ? window.localStorage.getItem(newPeriodDismissedKey) : null;
+      setLastNewPeriodDismissedDate(stored || null);
     } catch {}
-  }, []);
+  }, [day1Str]);
 
   const baseOffset = useMemo(() => {
     const a = startOfDay(today).getTime();
@@ -506,7 +507,7 @@ function NavigateInner() {
 
   // Ask "period over?" on first day after current assumed bleed (Day 6 if default 5, then 7, 8...)
   const showBleedQuestion = !dismissBleedPrompt && current.dayIndex === bleedOverride + 1;
-  // Ask "new period started?" when at/past end of cycle; "Not yet" hides for today only — prompt shows again next calendar day (date in localStorage, never cleared on load)
+  // Ask "new period started?" when at/past end of cycle; "Not yet" hides for today only (per-cycle key so prompt shows again next day and new cycle always shows)
   const todayDateStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}-${String(new Date().getDate()).padStart(2, "0")}`;
   const showNewPeriodQuestion =
     current.dayIndex >= cycleLength &&
@@ -541,10 +542,6 @@ function NavigateInner() {
     } catch (_) {}
     setDelta(0);
     setDismissBleedPrompt(false);
-    setLastNewPeriodDismissedDate(null);
-    try {
-      if (typeof window !== "undefined") window.localStorage.removeItem("cf_new_period_dismissed_date");
-    } catch {}
     setNewCycleConfirmation(true);
     setTimeout(() => setNewCycleConfirmation(false), 4000);
     router.replace(
@@ -876,7 +873,7 @@ function NavigateInner() {
               onClick={() => {
                 setLastNewPeriodDismissedDate(todayDateStr);
                 try {
-                  if (typeof window !== "undefined") window.localStorage.setItem("cf_new_period_dismissed_date", todayDateStr);
+                  if (typeof window !== "undefined") window.localStorage.setItem(newPeriodDismissedKey, todayDateStr);
                 } catch {}
               }}
               style={{
