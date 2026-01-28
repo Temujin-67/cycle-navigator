@@ -99,7 +99,7 @@ export default function HomePage() {
       </label>
 
       <label style={{ display: "block", marginTop: "1.25rem", fontSize: "0.9375rem", fontWeight: 600 }}>
-        Her typical cycle length (days)
+        Her typical cycle length (days) — optional
         <input
           type="number"
           min={21}
@@ -128,7 +128,7 @@ export default function HomePage() {
           }}
         />
         <span style={{ fontSize: "0.8125rem", color: "var(--text-secondary)", marginTop: "0.25rem", display: "block" }}>
-          Usually 21–35. If her cycle is often longer or shorter than 28, set this for a better estimate.
+          Leave at 28 if unsure. We&apos;ll learn it when she has her next period.
         </span>
       </label>
 
@@ -187,6 +187,10 @@ export default function HomePage() {
       >
         Continue
       </button>
+
+      <p style={{ marginTop: "1.5rem", fontSize: "0.8125rem", color: "var(--text-secondary)", lineHeight: 1.4 }}>
+        <strong>Disclaimer:</strong> For informational use only. Not for contraception or medical decisions. Not medical advice. Consult a healthcare provider for health decisions.
+      </p>
     </main>
   );
 }

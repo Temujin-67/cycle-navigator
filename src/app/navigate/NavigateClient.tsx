@@ -36,12 +36,12 @@ function addDays(d: Date, n: number) {
   return x;
 }
 
-// DD MM YYYY
+// dd/mm/yyyy
 function fmt(d: Date) {
   const dd = String(d.getDate()).padStart(2, "0");
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const yyyy = d.getFullYear();
-  return `${dd} ${mm} ${yyyy}`;
+  return `${dd}/${mm}/${yyyy}`;
 }
 
 function clamp(n: number, a: number, b: number) {

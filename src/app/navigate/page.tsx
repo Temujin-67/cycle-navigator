@@ -39,11 +39,10 @@ function addDays(d: Date, n: number) {
 }
 
 function fmt(d: Date) {
-  return d.toLocaleDateString(undefined, {
-    weekday: "short",
-    day: "2-digit",
-    month: "short",
-  });
+  const dd = String(d.getDate()).padStart(2, "0");
+  const mm = String(d.getMonth() + 1).padStart(2, "0");
+  const yyyy = d.getFullYear();
+  return `${dd}/${mm}/${yyyy}`;
 }
 
 function startOfDay(d: Date) {
@@ -446,7 +445,7 @@ function DayCard({ d }: { d: DayInfo }) {
       </div>
 
       <div style={{ marginTop: 14, fontSize: 12, color: "#444", lineHeight: 1.35 }}>
-        Pattern-based. Individual responses differ. Not medical advice.
+        <strong>Disclaimer:</strong> For informational use only. Not for contraception or medical decisions. Pattern-based. Individual responses differ. Not medical advice. Consult a healthcare provider for health decisions.
       </div>
     </section>
   );
@@ -462,6 +461,7 @@ function NavigateInner() {
   const cycleLength = Number(sp.get("cl") || DEFAULTS.cycleLength);
 
   const [dismissBleedPrompt, setDismissBleedPrompt] = useState(false);
+  const [dismissNewPeriodPrompt, setDismissNewPeriodPrompt] = useState(false);
 
   const day1 = useMemo(() => new Date(day1Str + "T12:00:00"), [day1Str]);
   const today = useMemo(() => new Date(), []);
@@ -490,6 +490,8 @@ function NavigateInner() {
 
   // Ask "period over?" on first day after current assumed bleed (Day 6 if default 5, then 7, 8...)
   const showBleedQuestion = !dismissBleedPrompt && current.dayIndex === bleedOverride + 1;
+  // Ask "new period started?" when we're at or past the end of the cycle so we don't loop forever in PMS
+  const showNewPeriodQuestion = !dismissNewPeriodPrompt && current.dayIndex >= cycleLength;
 
   const qpBase = `age=${encodeURIComponent(age)}&day1=${encodeURIComponent(day1Str)}&cl=${encodeURIComponent(String(cycleLength))}`;
 
@@ -500,6 +502,16 @@ function NavigateInner() {
 
   function setBleedToDay(day: number) {
     router.push(`/navigate?${qpBase}&bd=${encodeURIComponent(String(day))}`);
+    router.refresh();
+  }
+
+  function startNewCycle() {
+    const d = current.date;
+    const newDay1Str = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+    const learnedCl = current.dayIndex;
+    router.push(
+      `/navigate?age=${encodeURIComponent(age)}&day1=${encodeURIComponent(newDay1Str)}&bd=5&cl=${learnedCl}`
+    );
     router.refresh();
   }
 
@@ -739,6 +751,54 @@ function NavigateInner() {
               </select>
             </div>
           )}
+        </section>
+      )}
+
+      {showNewPeriodQuestion && (
+        <section
+          style={{
+            marginTop: 12,
+            borderRadius: 16,
+            padding: 14,
+            border: "1px solid #16A34A",
+            background: "#F1FFF5",
+            boxShadow: "0 1px 0 rgba(0,0,0,0.05)",
+          }}
+        >
+          <div style={{ fontWeight: 1000 as any }}>Day {current.dayIndex}: new period started?</div>
+          <div style={{ marginTop: 6, fontSize: 13, color: "#444" }}>
+            Start a new cycle so the app resets and we don&apos;t keep showing PMS. We&apos;ll use this cycle length ({current.dayIndex} days) for the next one.
+          </div>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
+            <button
+              onClick={startNewCycle}
+              style={{
+                border: "1px solid #16A34A",
+                background: "#16A34A",
+                color: "#fff",
+                padding: "10px 12px",
+                borderRadius: 12,
+                fontWeight: 1000 as any,
+                cursor: "pointer",
+              }}
+            >
+              Yes, new cycle
+            </button>
+            <button
+              onClick={() => setDismissNewPeriodPrompt(true)}
+              style={{
+                border: "1px solid #ddd",
+                background: "#fff",
+                color: "#111",
+                padding: "10px 12px",
+                borderRadius: 12,
+                fontWeight: 1000 as any,
+                cursor: "pointer",
+              }}
+            >
+              Not yet
+            </button>
+          </div>
         </section>
       )}
 
