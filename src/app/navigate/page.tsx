@@ -52,21 +52,31 @@ function startOfDay(d: Date) {
   return x;
 }
 
-function pick(lines: string[], dayIndex: number, salt: number, viewSalt: number) {
-  // Deterministic variation: dayIndex + field salt + view salt (changes as you swipe)
-  const idx = (dayIndex * 7 + salt * 13 + viewSalt * 19) % lines.length;
-  return lines[idx];
+// Unique forecast per day: no two days get the same 6-tuple of lines (mood, libido, stress, comm, play, avoid)
+const FORECAST_COMBOS = 3 * 3 * 3 * 3 * 3 * 3; // 729
+function pickUnique(lines: string[], dayIndex: number, fieldIndex: number) {
+  const forecastId = (dayIndex * 97) % FORECAST_COMBOS;
+  const indices = [
+    forecastId % 3,
+    Math.floor(forecastId / 3) % 3,
+    Math.floor(forecastId / 9) % 3,
+    Math.floor(forecastId / 27) % 3,
+    Math.floor(forecastId / 81) % 3,
+    Math.floor(forecastId / 243) % 3,
+  ];
+  return lines[indices[fieldIndex] % lines.length];
 }
 
-function phaseForDay(dayIndex: number, bleedOverride?: number): Phase {
+function phaseForDay(dayIndex: number, bleedOverride?: number, cycleLengthOverride?: number): Phase {
   const bleed = bleedOverride ?? DEFAULTS.bleedDays;
+  const cycleLength = cycleLengthOverride ?? DEFAULTS.cycleLength;
 
-  const ovCenter = Math.round(DEFAULTS.cycleLength / 2);
+  const ovCenter = Math.round(cycleLength / 2);
   const ovHalf = Math.floor(DEFAULTS.ovulationWindow / 2);
   const ovStart = ovCenter - ovHalf;
   const ovEnd = ovCenter + ovHalf;
 
-  const pmsStart = DEFAULTS.cycleLength - DEFAULTS.pmsDays + 1;
+  const pmsStart = cycleLength - DEFAULTS.pmsDays + 1;
 
   if (dayIndex <= bleed) return "Menstrual";
   if (dayIndex >= ovStart && dayIndex <= ovEnd) return "Ovulatory";
@@ -82,11 +92,11 @@ function riskFor(phase: Phase): RiskLevel {
   return "Low";
 }
 
-function ovulationMeta(dayIndex: number) {
-  // Default 28-day model: ovulation peak ~14, fertile window ~12–15
-  const peak = Math.round(DEFAULTS.cycleLength / 2); // 14
-  const fertileStart = peak - 2; // 12
-  const fertileEnd = peak + 1; // 15
+function ovulationMeta(dayIndex: number, cycleLengthOverride?: number) {
+  const cycleLength = cycleLengthOverride ?? DEFAULTS.cycleLength;
+  const peak = Math.round(cycleLength / 2);
+  const fertileStart = peak - 2;
+  const fertileEnd = peak + 1;
   return {
     peak,
     fertileStart,
@@ -96,27 +106,28 @@ function ovulationMeta(dayIndex: number) {
   };
 }
 
-function fertilityLine(dayIndex: number) {
-  const { isPeak, inWindow } = ovulationMeta(dayIndex);
-  if (isPeak) return "Highest odds today (best day in the 28-day model).";
+function fertilityLine(dayIndex: number, cycleLengthOverride?: number) {
+  const { isPeak, inWindow } = ovulationMeta(dayIndex, cycleLengthOverride);
+  if (isPeak) return "Highest odds today (best day in the cycle).";
   if (inWindow) return "High odds today (fertile window).";
   return "Lower odds today (relative to fertile window).";
 }
 
-// Best / worst day ranges for this cycle (depends on bleed)
-function bestWorstRanges(bleedOverride: number) {
+// Best / worst day ranges for this cycle (depends on bleed and cycle length)
+function bestWorstRanges(bleedOverride: number, cycleLengthOverride?: number) {
   const bleed = bleedOverride ?? DEFAULTS.bleedDays;
-  const ovCenter = Math.round(DEFAULTS.cycleLength / 2);
+  const cycleLength = cycleLengthOverride ?? DEFAULTS.cycleLength;
+  const ovCenter = Math.round(cycleLength / 2);
   const ovHalf = Math.floor(DEFAULTS.ovulationWindow / 2);
   const ovStart = ovCenter - ovHalf;
   const ovEnd = ovCenter + ovHalf;
-  const pmsStart = DEFAULTS.cycleLength - DEFAULTS.pmsDays + 1;
+  const pmsStart = cycleLength - DEFAULTS.pmsDays + 1;
   const fertileStart = ovCenter - 2;
   const fertileEnd = ovCenter + 1;
   const bestStart = bleed + 1;
   const bestEnd = ovEnd;
   const worstStart = pmsStart;
-  const worstEnd = DEFAULTS.cycleLength;
+  const worstEnd = cycleLength;
   return {
     bestDays: `Day ${bestStart}-${bestEnd}`,
     worstDays: `Day ${worstStart}-${worstEnd}`,
@@ -146,209 +157,179 @@ function stressEmojiForPhase(phase: Phase): string {
   return "🟢"; // Follicular, Ovulatory
 }
 
-function copyFor(phase: Phase, dayIndex: number, viewSalt: number) {
-  // Banks: Mood / Libido / Stress / Communication / Play / Avoid
+// Field indices for unique forecast: 0=mood, 1=libido, 2=stress, 3=communication, 4=play, 5=avoid
+function copyFor(phase: Phase, dayIndex: number) {
   if (phase === "Follicular") {
     return {
-      mood: pick(
+      mood: pickUnique(
         ["She's in a better mood. Less hassle.", "Easier day. Fewer blow-ups.", "More even. Stuff goes smoother."],
         dayIndex,
-        11,
-        viewSalt
+        0
       ),
-      libido: pick(
+      libido: pickUnique(
         ["Interest is picking up.", "Better than last week.", "Easier day for that."],
         dayIndex,
-        12,
-        viewSalt
+        1
       ),
-      stress: pick(
+      stress: pickUnique(
         ["She won't blow up as easy.", "More patience today.", "Normal stuff doesn't set her off."],
         dayIndex,
-        14,
-        viewSalt
+        2
       ),
-      communication: pick(
+      communication: pickUnique(
         ["Keep it clear and simple.", "Say it straight. No essays.", "Be direct. Don’t overtalk."],
         dayIndex,
-        15,
-        viewSalt
+        3
       ),
-      play: pick(
+      play: pickUnique(
         ["Get practical stuff done.", "Decide and move on.", "Make a plan and stick to it."],
         dayIndex,
-        16,
-        viewSalt
+        4
       ),
-      avoid: pick(
+      avoid: pickUnique(
         ["Don't start fights over nothing.", "Don't nitpick.", "Don't make a big deal out of small stuff."],
         dayIndex,
-        18,
-        viewSalt
+        5
       ),
     };
   }
 
   if (phase === "Ovulatory") {
     return {
-      mood: pick(
+      mood: pickUnique(
         ["She's more open today.", "She's more up for stuff.", "She responds better today."],
         dayIndex,
-        21,
-        viewSalt
+        0
       ),
-      libido: pick(
+      libido: pickUnique(
         ["Interest is up today.", "Signals are clearer.", "Attraction is more obvious."],
         dayIndex,
-        22,
-        viewSalt
+        1
       ),
-      stress: pick(
+      stress: pickUnique(
         ["Harder to annoy her today.", "Less friction.", "She's less defensive."],
         dayIndex,
-        24,
-        viewSalt
+        2
       ),
-      communication: pick(
+      communication: pickUnique(
         ["How you say it matters more than what you say.", "Keep it simple and confident.", "Don’t overtalk."],
         dayIndex,
-        25,
-        viewSalt
+        3
       ),
-      play: pick(
+      play: pickUnique(
         ["Show up. Put in the effort.", "Be there. Don't half-ass it.", "Put in effort. Don't overdo it."],
         dayIndex,
-        26,
-        viewSalt
+        4
       ),
-      avoid: pick(
+      avoid: pickUnique(
         ["Don't make it a big thing.", "Don't try too hard.", "Don't push."],
         dayIndex,
-        28,
-        viewSalt
+        5
       ),
     };
   }
 
   if (phase === "Menstrual") {
     return {
-      mood: pick(
+      mood: pickUnique(
         ["She has less patience today.", "Short fuse today.", "Small stuff irritates her faster."],
         dayIndex,
-        31,
-        viewSalt
+        0
       ),
-      libido: pick(
+      libido: pickUnique(
         ["Interest is low today.", "Not a sex day.", "Leave it alone today."],
         dayIndex,
-        32,
-        viewSalt
+        1
       ),
-      stress: pick(
+      stress: pickUnique(
         ["She gets stressed fast.", "No patience for hassle.", "Short fuse."],
         dayIndex,
-        34,
-        viewSalt
+        2
       ),
-      communication: pick(
+      communication: pickUnique(
         ["Talk less. Or you'll get an argument.", "Keep it short. Stick to facts.", "Not the day for long talks."],
         dayIndex,
-        35,
-        viewSalt
+        3
       ),
-      play: pick(
+      play: pickUnique(
         ["Handle the essentials. Skip the rest.", "Do the basics. Don’t add more.", "Keep it simple. Don't add stress."],
         dayIndex,
-        36,
-        viewSalt
+        4
       ),
-      avoid: pick(
+      avoid: pickUnique(
         ["Don't start big talks.", "Don't push for decisions.", "Don't bring up stuff you can’t fix today."],
         dayIndex,
-        38,
-        viewSalt
+        5
       ),
     };
   }
 
   if (phase === "Luteal") {
     return {
-      mood: pick(
+      mood: pickUnique(
         ["Less playful. More serious.", "Mood varies.", "She gets annoyed easier."],
         dayIndex,
-        41,
-        viewSalt
+        0
       ),
-      libido: pick(
+      libido: pickUnique(
         ["Depends on her mood.", "Possible but not a given.", "Less consistent than last week."],
         dayIndex,
-        42,
-        viewSalt
+        1
       ),
-      stress: pick(
+      stress: pickUnique(
         ["She can't handle chaos today.", "She gets irritated faster.", "If you push, you get friction."],
         dayIndex,
-        44,
-        viewSalt
+        2
       ),
-      communication: pick(
+      communication: pickUnique(
         ["Be clear. Be specific.", "Say it once. Say it clear.", "No vague stuff."],
         dayIndex,
-        45,
-        viewSalt
+        3
       ),
-      play: pick(
+      play: pickUnique(
         ["Stick to the plan. No surprises.", "Less chaos. Keep it tidy.", "Routine. No surprises."],
         dayIndex,
-        46,
-        viewSalt
+        4
       ),
-      avoid: pick(
+      avoid: pickUnique(
         ["No last-minute changes.", "‘We’ll see’ answers.", "Don't make a mess of things."],
         dayIndex,
-        48,
-        viewSalt
+        5
       ),
     };
   }
 
   // PMS
   return {
-    mood: pick(
+    mood: pickUnique(
       ["No room for error.", "She reacts sharp.", "She's sensitive to how you say things."],
       dayIndex,
-      51,
-      viewSalt
+      0
     ),
-    libido: pick(
+    libido: pickUnique(
       ["Not a priority today.", "Forget it today.", "Unpredictable."],
       dayIndex,
-      52,
-      viewSalt
+      1
     ),
-    stress: pick(
+    stress: pickUnique(
       ["Small stuff feels big to her.", "Things escalate fast.", "Thin patience."],
       dayIndex,
-      54,
-      viewSalt
+      2
     ),
-    communication: pick(
+    communication: pickUnique(
       ["No debates.", "Don't correct her.", "Listen more. Explain less."],
       dayIndex,
-      55,
-      viewSalt
+      3
     ),
-    play: pick(
+    play: pickUnique(
       ["Do the basics. Don’t poke.", "Reduce friction. Keep it calm.", "Don't make it worse. Keep it simple."],
       dayIndex,
-      56,
-      viewSalt
+      4
     ),
-    avoid: pick(
+    avoid: pickUnique(
       ["No arguments.", "No logic battles.", "No pointless fights."],
       dayIndex,
-      58,
-      viewSalt
+      5
     ),
   };
 }
@@ -478,6 +459,7 @@ function NavigateInner() {
   const age = sp.get("age") || "";
   const day1Str = sp.get("day1") || "";
   const bleedOverride = Number(sp.get("bd") || DEFAULTS.bleedDays);
+  const cycleLength = Number(sp.get("cl") || DEFAULTS.cycleLength);
 
   const [dismissBleedPrompt, setDismissBleedPrompt] = useState(false);
 
@@ -494,25 +476,30 @@ function NavigateInner() {
   const [delta, setDelta] = useState(0);
   const viewOffset = baseOffset + delta;
 
-  const build = (o: number, viewSalt: number): DayInfo => {
+  const build = (o: number): DayInfo => {
     const date = addDays(day1, o);
     const dayIndex = o + 1;
-    const phase = phaseForDay(dayIndex, bleedOverride);
+    const phase = phaseForDay(dayIndex, bleedOverride, cycleLength);
     const risk = riskFor(phase);
-    const c = copyFor(phase, dayIndex, viewSalt);
-    const fertility = fertilityLine(dayIndex);
+    const c = copyFor(phase, dayIndex);
+    const fertility = fertilityLine(dayIndex, cycleLength);
     return { date, dayIndex, phase, risk, fertility, ...c };
   };
 
-  const current = useMemo(() => build(viewOffset, delta + 100), [viewOffset, delta, bleedOverride]);
+  const current = useMemo(() => build(viewOffset), [viewOffset, bleedOverride, cycleLength]);
 
   // Ask "period over?" on first day after current assumed bleed (Day 6 if default 5, then 7, 8...)
   const showBleedQuestion = !dismissBleedPrompt && current.dayIndex === bleedOverride + 1;
 
-  const qpBase = `age=${encodeURIComponent(age)}&day1=${encodeURIComponent(day1Str)}`;
+  const qpBase = `age=${encodeURIComponent(age)}&day1=${encodeURIComponent(day1Str)}&cl=${encodeURIComponent(String(cycleLength))}`;
 
   function extendBleedToCurrentDay() {
     router.push(`/navigate?${qpBase}&bd=${encodeURIComponent(String(current.dayIndex))}`);
+    router.refresh();
+  }
+
+  function setBleedToDay(day: number) {
+    router.push(`/navigate?${qpBase}&bd=${encodeURIComponent(String(day))}`);
     router.refresh();
   }
 
@@ -619,7 +606,7 @@ function NavigateInner() {
             }}
           >
             <div style={{ fontSize: 11, fontWeight: 800, color: "#0B6B45", marginBottom: 4 }}>Best day for conversations</div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "#111" }}>{bestWorstRanges(bleedOverride).bestDays}</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#111" }}>{bestWorstRanges(bleedOverride, cycleLength).bestDays}</div>
             <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Conversations, planning, hanging out.</div>
           </div>
           <div
@@ -631,7 +618,7 @@ function NavigateInner() {
             }}
           >
             <div style={{ fontSize: 11, fontWeight: 800, color: "#7F1D1D", marginBottom: 4 }}>Worst day for</div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "#111" }}>{bestWorstRanges(bleedOverride).worstDays}</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#111" }}>{bestWorstRanges(bleedOverride, cycleLength).worstDays}</div>
             <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Big talks, pushing decisions, arguments.</div>
           </div>
         </div>
@@ -652,7 +639,7 @@ function NavigateInner() {
             }}
           >
             <div style={{ fontSize: 11, fontWeight: 800, color: "#7A4B00", marginBottom: 4 }}>Best day for libido</div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "#111" }}>{bestWorstRanges(bleedOverride).bestLibidoDays}</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#111" }}>{bestWorstRanges(bleedOverride, cycleLength).bestLibidoDays}</div>
             <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Interest highest. Signals clearer.</div>
           </div>
           <div
@@ -664,7 +651,7 @@ function NavigateInner() {
             }}
           >
             <div style={{ fontSize: 11, fontWeight: 800, color: "#7F1D1D", marginBottom: 4 }}>Worst day for libido</div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "#111" }}>{bestWorstRanges(bleedOverride).worstLibidoDays}</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#111" }}>{bestWorstRanges(bleedOverride, cycleLength).worstLibidoDays}</div>
             <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Low interest. Leave it alone.</div>
           </div>
           <div
@@ -676,7 +663,7 @@ function NavigateInner() {
             }}
           >
             <div style={{ fontSize: 11, fontWeight: 800, color: "#0B4A84", marginBottom: 4 }}>Best day for pregnancy</div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "#111" }}>{bestWorstRanges(bleedOverride).bestPregnancyDays}</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "#111" }}>{bestWorstRanges(bleedOverride, cycleLength).bestPregnancyDays}</div>
             <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Fertile window. Highest odds.</div>
           </div>
         </div>
@@ -729,6 +716,29 @@ function NavigateInner() {
               Yes, over
             </button>
           </div>
+
+          {current.dayIndex > 2 && (
+            <div style={{ marginTop: 12, fontSize: 12, color: "#444" }}>
+              She said it ended earlier — on day{" "}
+              <select
+                value={bleedOverride}
+                onChange={(e) => setBleedToDay(Number(e.target.value))}
+                style={{
+                  padding: "6px 8px",
+                  borderRadius: 8,
+                  border: "1px solid #ddd",
+                  fontWeight: 700,
+                  cursor: "pointer",
+                }}
+              >
+                {Array.from({ length: current.dayIndex - 1 }, (_, i) => i + 1).map((d) => (
+                  <option key={d} value={d}>
+                    {d}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
         </section>
       )}
 
