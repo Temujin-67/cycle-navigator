@@ -162,7 +162,7 @@ function copyFor(phase: Phase, dayIndex: number) {
   if (phase === "Follicular") {
     return {
       mood: pickUnique(
-        ["She's in a better mood. Less hassle.", "Easier day. Fewer blow-ups.", "More even. Stuff goes smoother."],
+        ["Better mood. Less hassle.", "Easier day. Fewer blow-ups.", "More even. Stuff goes smoother."],
         dayIndex,
         0
       ),
@@ -172,17 +172,17 @@ function copyFor(phase: Phase, dayIndex: number) {
         1
       ),
       stress: pickUnique(
-        ["She won't blow up as easy.", "More patience today.", "Normal stuff doesn't set her off."],
+        ["Won't blow up as easy.", "More patience today.", "Normal stuff doesn't set her off."],
         dayIndex,
         2
       ),
       communication: pickUnique(
-        ["Keep it clear and simple.", "Say it straight. No essays.", "Be direct. Don’t overtalk."],
+        ["Say it, then stop. Don’t turn it into a discussion.", "Clear and simple. No essays.", "Be direct. Don’t overtalk."],
         dayIndex,
         3
       ),
       play: pickUnique(
-        ["Get practical stuff done.", "Decide and move on.", "Make a plan and stick to it."],
+        ["Handle practical stuff. Decide and move on.", "Make a plan and stick to it.", "Get things done. Keep plans simple."],
         dayIndex,
         4
       ),
@@ -212,7 +212,7 @@ function copyFor(phase: Phase, dayIndex: number) {
         2
       ),
       communication: pickUnique(
-        ["How you say it matters more than what you say.", "Keep it simple and confident.", "Don’t overtalk."],
+        ["Say it, then stop. Don’t turn it into a debate.", "How you say it matters. Keep it confident.", "Don’t overtalk."],
         dayIndex,
         3
       ),
@@ -232,7 +232,7 @@ function copyFor(phase: Phase, dayIndex: number) {
   if (phase === "Menstrual") {
     return {
       mood: pickUnique(
-        ["She has less patience today.", "Short fuse today.", "Small stuff irritates her faster."],
+        ["Less patience today.", "Short fuse today.", "Small stuff irritates faster."],
         dayIndex,
         0
       ),
@@ -242,7 +242,7 @@ function copyFor(phase: Phase, dayIndex: number) {
         1
       ),
       stress: pickUnique(
-        ["She gets stressed fast.", "No patience for hassle.", "Short fuse."],
+        ["Gets stressed fast.", "No patience for hassle.", "Short fuse."],
         dayIndex,
         2
       ),
@@ -267,7 +267,7 @@ function copyFor(phase: Phase, dayIndex: number) {
   if (phase === "Luteal") {
     return {
       mood: pickUnique(
-        ["Less playful. More serious.", "Mood varies.", "She gets annoyed easier."],
+        ["Less playful. More serious.", "Mood varies.", "Gets annoyed easier."],
         dayIndex,
         0
       ),
@@ -282,17 +282,17 @@ function copyFor(phase: Phase, dayIndex: number) {
         2
       ),
       communication: pickUnique(
-        ["Be clear. Be specific.", "Say it once. Say it clear.", "No vague stuff."],
+        ["Say it once. Say it clear. Don’t turn it into a discussion.", "Be clear. Be specific. No vague stuff.", "Short and clear. Don’t reopen it."],
         dayIndex,
         3
       ),
       play: pickUnique(
-        ["Stick to the plan. No surprises.", "Less chaos. Keep it tidy.", "Routine. No surprises."],
+        ["Stick to the plan. No surprises.", "Handle essentials. Keep it tidy.", "Routine. Avoid big topics."],
         dayIndex,
         4
       ),
       avoid: pickUnique(
-        ["No last-minute changes.", "‘We’ll see’ answers.", "Don't make a mess of things."],
+        ["Don’t spring last-minute changes.", "Don’t push for 'We’ll see' to become yes.", "Don’t make a mess of things."],
         dayIndex,
         5
       ),
@@ -327,7 +327,7 @@ function copyFor(phase: Phase, dayIndex: number) {
       4
     ),
     avoid: pickUnique(
-      ["No arguments.", "No logic battles.", "No pointless fights."],
+      ["Don’t bring up old arguments.", "Don’t push for a decision.", "Don’t critique her tone."],
       dayIndex,
       5
     ),
@@ -463,25 +463,25 @@ function NavigateInner() {
   const cycleLength = Number(sp.get("cl") || DEFAULTS.cycleLength);
 
   const [dismissBleedPrompt, setDismissBleedPrompt] = useState(false);
-  const [lastNewPeriodDismissedDate, setLastNewPeriodDismissedDate] = useState<string | null>(null);
+  const [lastNewPeriodNotYetDate, setLastNewPeriodNotYetDate] = useState<string | null>(null);
 
   const day1 = useMemo(() => new Date(day1Str + "T12:00:00"), [day1Str]);
   const today = useMemo(() => new Date(), []);
 
-  // When cycle (day1) changes, reset view and bleed prompt; do NOT clear "Not yet" date — only clear when they click "Yes, new cycle"
+  // When cycle (day1) changes, reset view and bleed prompt; do NOT clear "Not yet" date
   React.useEffect(() => {
     setDelta(0);
     setDismissBleedPrompt(false);
   }, [day1Str]);
 
-  // Per-cycle "Not yet" date: read from localStorage key for this cycle so new cycle gets empty key and prompt shows
-  const newPeriodDismissedKey = `cf_new_period_dismissed_${day1Str}`;
+  // Per-cycle "Not yet" date: read from key for this cycle only; new cycle = new key = prompt shows again
+  const newPeriodNotYetKey = `cf_new_period_notyet_${day1Str}`;
   React.useEffect(() => {
     try {
-      const stored = typeof window !== "undefined" ? window.localStorage.getItem(newPeriodDismissedKey) : null;
-      setLastNewPeriodDismissedDate(stored || null);
+      const stored = typeof window !== "undefined" ? window.localStorage.getItem(newPeriodNotYetKey) : null;
+      setLastNewPeriodNotYetDate(stored || null);
     } catch {}
-  }, [day1Str]);
+  }, [day1Str, newPeriodNotYetKey]);
 
   const baseOffset = useMemo(() => {
     const a = startOfDay(today).getTime();
@@ -507,11 +507,12 @@ function NavigateInner() {
 
   // Ask "period over?" on first day after current assumed bleed (Day 6 if default 5, then 7, 8...)
   const showBleedQuestion = !dismissBleedPrompt && current.dayIndex === bleedOverride + 1;
-  // Ask "new period started?" when at/past end of cycle; "Not yet" hides for today only (per-cycle key so prompt shows again next day and new cycle always shows)
+  // "New period started?" only when viewing TODAY (delta === 0); "Not yet" hides for this calendar day only, reappears next day
   const todayDateStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}-${String(new Date().getDate()).padStart(2, "0")}`;
   const showNewPeriodQuestion =
+    delta === 0 &&
     current.dayIndex >= cycleLength &&
-    (lastNewPeriodDismissedDate === null || lastNewPeriodDismissedDate !== todayDateStr);
+    (lastNewPeriodNotYetDate === null || lastNewPeriodNotYetDate !== todayDateStr);
 
   const qpBase = `age=${encodeURIComponent(age)}&day1=${encodeURIComponent(day1Str)}&cl=${encodeURIComponent(String(cycleLength))}`;
 
@@ -871,9 +872,9 @@ function NavigateInner() {
             </button>
             <button
               onClick={() => {
-                setLastNewPeriodDismissedDate(todayDateStr);
+                setLastNewPeriodNotYetDate(todayDateStr);
                 try {
-                  if (typeof window !== "undefined") window.localStorage.setItem(newPeriodDismissedKey, todayDateStr);
+                  if (typeof window !== "undefined") window.localStorage.setItem(newPeriodNotYetKey, todayDateStr);
                 } catch {}
               }}
               style={{
