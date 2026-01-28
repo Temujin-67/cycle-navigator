@@ -463,17 +463,24 @@ function NavigateInner() {
   const cycleLength = Number(sp.get("cl") || DEFAULTS.cycleLength);
 
   const [dismissBleedPrompt, setDismissBleedPrompt] = useState(false);
-  const [dismissNewPeriodForNow, setDismissNewPeriodForNow] = useState(false);
+  const [lastNewPeriodDismissedDate, setLastNewPeriodDismissedDate] = useState<string | null>(null);
 
   const day1 = useMemo(() => new Date(day1Str + "T12:00:00"), [day1Str]);
   const today = useMemo(() => new Date(), []);
 
-  // When cycle (day1) changes, reset view and prompt state so new cycle shows Day 1 and prompts work again
+  // When cycle (day1) changes, reset view and bleed prompt; do NOT clear "Not yet" date — only clear when they click "Yes, new cycle"
   React.useEffect(() => {
     setDelta(0);
     setDismissBleedPrompt(false);
-    setDismissNewPeriodForNow(false);
   }, [day1Str]);
+
+  // On mount, read "Not yet" date from localStorage so prompt shows again on a different calendar day
+  React.useEffect(() => {
+    try {
+      const stored = typeof window !== "undefined" ? window.localStorage.getItem("cf_new_period_dismissed_date") : null;
+      if (stored) setLastNewPeriodDismissedDate(stored);
+    } catch {}
+  }, []);
 
   const baseOffset = useMemo(() => {
     const a = startOfDay(today).getTime();
@@ -499,8 +506,11 @@ function NavigateInner() {
 
   // Ask "period over?" on first day after current assumed bleed (Day 6 if default 5, then 7, 8...)
   const showBleedQuestion = !dismissBleedPrompt && current.dayIndex === bleedOverride + 1;
-  // Ask "new period started?" when at/past end of cycle; "Not yet" hides for this session only — prompt shows again on next load
-  const showNewPeriodQuestion = current.dayIndex >= cycleLength && !dismissNewPeriodForNow;
+  // Ask "new period started?" when at/past end of cycle; "Not yet" hides for today only — prompt shows again next calendar day (date in localStorage, never cleared on load)
+  const todayDateStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}-${String(new Date().getDate()).padStart(2, "0")}`;
+  const showNewPeriodQuestion =
+    current.dayIndex >= cycleLength &&
+    (lastNewPeriodDismissedDate === null || lastNewPeriodDismissedDate !== todayDateStr);
 
   const qpBase = `age=${encodeURIComponent(age)}&day1=${encodeURIComponent(day1Str)}&cl=${encodeURIComponent(String(cycleLength))}`;
 
@@ -531,7 +541,10 @@ function NavigateInner() {
     } catch (_) {}
     setDelta(0);
     setDismissBleedPrompt(false);
-    setDismissNewPeriodForNow(false);
+    setLastNewPeriodDismissedDate(null);
+    try {
+      if (typeof window !== "undefined") window.localStorage.removeItem("cf_new_period_dismissed_date");
+    } catch {}
     setNewCycleConfirmation(true);
     setTimeout(() => setNewCycleConfirmation(false), 4000);
     router.replace(
@@ -860,7 +873,12 @@ function NavigateInner() {
               Yes, new cycle
             </button>
             <button
-              onClick={() => setDismissNewPeriodForNow(true)}
+              onClick={() => {
+                setLastNewPeriodDismissedDate(todayDateStr);
+                try {
+                  if (typeof window !== "undefined") window.localStorage.setItem("cf_new_period_dismissed_date", todayDateStr);
+                } catch {}
+              }}
               style={{
                 border: "1px solid var(--input-border)",
                 background: "var(--background)",
