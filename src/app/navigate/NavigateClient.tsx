@@ -36,12 +36,12 @@ function addDays(d: Date, n: number) {
   return x;
 }
 
-// dd/mm/yyyy
+// dd mm yyyy
 function fmt(d: Date) {
   const dd = String(d.getDate()).padStart(2, "0");
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const yyyy = d.getFullYear();
-  return `${dd}/${mm}/${yyyy}`;
+  return `${dd} ${mm} ${yyyy}`;
 }
 
 function clamp(n: number, a: number, b: number) {
@@ -228,7 +228,7 @@ export default function NavigateClient() {
           </div>
 
           <div style={{ marginTop: 10, fontWeight: 700 }}>
-            Day {d.dayIndex} — {d.phase}
+            Day {d.dayIndex} — {d.phase} phase
           </div>
 
           <div style={{ marginTop: 8, fontSize: 13, color: "#444" }}>

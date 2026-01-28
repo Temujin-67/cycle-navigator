@@ -71,21 +71,24 @@ export default function HomePage() {
       </label>
 
       <label style={{ display: "block", marginTop: "1.25rem", fontSize: "0.9375rem", fontWeight: 600 }}>
-        First day of her cycle
+        First day of her cycle (DD MM YYYY)
         <input
           type="date"
           value={day1}
           onChange={(e) => setDay1(e.target.value)}
+          aria-label="First day of her cycle — tap to open calendar"
           style={{
             width: "100%",
-            padding: "0.75rem 0.875rem",
-            marginTop: "0.375rem",
+            padding: "0.875rem 1rem",
+            marginTop: "0.5rem",
             fontSize: "1rem",
-            border: "1px solid var(--input-border)",
+            minHeight: "48px",
+            border: "2px solid var(--input-border)",
             borderRadius: 10,
             background: "var(--input-bg)",
             color: "var(--foreground)",
             outline: "none",
+            display: "block",
           }}
           onFocus={(e) => {
             e.currentTarget.style.borderColor = "var(--input-focus-border)";
@@ -96,6 +99,9 @@ export default function HomePage() {
             e.currentTarget.style.boxShadow = "none";
           }}
         />
+        <span style={{ fontSize: "0.8125rem", color: "var(--text-secondary)", marginTop: "0.375rem", display: "block" }}>
+          Tap the box above to open the calendar and pick the date.
+        </span>
       </label>
 
       <label style={{ display: "block", marginTop: "1.25rem", fontSize: "0.9375rem", fontWeight: 600 }}>

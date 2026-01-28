@@ -42,7 +42,7 @@ function fmt(d: Date) {
   const dd = String(d.getDate()).padStart(2, "0");
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const yyyy = d.getFullYear();
-  return `${dd}/${mm}/${yyyy}`;
+  return `${dd} ${mm} ${yyyy}`;
 }
 
 function startOfDay(d: Date) {
@@ -358,7 +358,7 @@ function PhaseChip({ phase }: { phase: Phase }) {
       }}
     >
       <span aria-hidden="true">{s.emoji}</span>
-      {phase}
+      {phase} phase
     </span>
   );
 }
@@ -506,7 +506,7 @@ function NavigateInner() {
   }
 
   function startNewCycle() {
-    const d = today;
+    const d = new Date();
     const newDay1Str = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     const learnedCl = current.dayIndex;
     router.push(
