@@ -506,7 +506,7 @@ function NavigateInner() {
   }
 
   function startNewCycle() {
-    const d = current.date;
+    const d = today;
     const newDay1Str = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     const learnedCl = current.dayIndex;
     router.push(
