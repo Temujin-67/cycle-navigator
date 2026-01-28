@@ -468,14 +468,20 @@ function NavigateInner() {
   const day1 = useMemo(() => new Date(day1Str + "T12:00:00"), [day1Str]);
   const today = useMemo(() => new Date(), []);
 
-  // When cycle (day1) changes, reset view and prompt state so new cycle shows Day 1 and prompts work again
+  const prevDay1StrRef = React.useRef<string | null>(null);
+
+  // When cycle (day1) changes, reset view and prompt state so new cycle shows Day 1 and prompts work again.
+  // Only clear "Not yet" date when day1Str actually changes (new cycle), not on initial mount — so prompt repeats every day until Yes.
   React.useEffect(() => {
     setDelta(0);
     setDismissBleedPrompt(false);
-    setLastNewPeriodDismissedDate(null);
-    try {
-      if (typeof window !== "undefined") window.localStorage.removeItem("cf_new_period_dismissed_date");
-    } catch {}
+    if (prevDay1StrRef.current !== null && prevDay1StrRef.current !== day1Str) {
+      setLastNewPeriodDismissedDate(null);
+      try {
+        if (typeof window !== "undefined") window.localStorage.removeItem("cf_new_period_dismissed_date");
+      } catch {}
+    }
+    prevDay1StrRef.current = day1Str;
   }, [day1Str]);
 
   const baseOffset = useMemo(() => {
