@@ -7,18 +7,63 @@ import { ThemeToggle } from "./ThemeToggle";
 const DEFAULT_CYCLE_LENGTH = 28;
 const DEFAULT_BLEED_DAYS = 5;
 
+function startOfDay(d: Date): Date {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x;
+}
+
 export default function HomePage() {
   const router = useRouter();
   const [age, setAge] = useState("");
   const [day1, setDay1] = useState("");
   const [cycleLength, setCycleLength] = useState(String(DEFAULT_CYCLE_LENGTH));
+  const [showPeriodStillOn, setShowPeriodStillOn] = useState(false);
+
+  const day1InPast = (): boolean => {
+    if (!day1) return false;
+    const day1Start = new Date(day1 + "T00:00:00");
+    const todayStart = startOfDay(new Date());
+    return day1Start.getTime() < todayStart.getTime();
+  };
+
+  const daysAgo = (): number => {
+    if (!day1) return 0;
+    const day1Start = new Date(day1 + "T00:00:00");
+    const todayStart = startOfDay(new Date());
+    return Math.floor((todayStart.getTime() - day1Start.getTime()) / 86400000);
+  };
+
+  const todayDayIndex = (): number => daysAgo() + 1;
 
   function go() {
     if (!age || !day1) return;
     const cl = Math.min(35, Math.max(21, Number(cycleLength) || DEFAULT_CYCLE_LENGTH));
+    if (day1InPast()) {
+      setShowPeriodStillOn(true);
+      return;
+    }
+    navigate(cl, DEFAULT_BLEED_DAYS);
+  }
+
+  function navigate(cl: number, bd: number) {
+    if (!age || !day1) return;
     router.push(
-      `/navigate?age=${encodeURIComponent(age)}&day1=${encodeURIComponent(day1)}&cl=${cl}&bd=${DEFAULT_BLEED_DAYS}`
+      `/navigate?age=${encodeURIComponent(age)}&day1=${encodeURIComponent(day1)}&cl=${cl}&bd=${bd}`
     );
+  }
+
+  function confirmPeriodStillOn() {
+    const cl = Math.min(35, Math.max(21, Number(cycleLength) || DEFAULT_CYCLE_LENGTH));
+    const bd = todayDayIndex();
+    setShowPeriodStillOn(false);
+    navigate(cl, bd);
+  }
+
+  function confirmPeriodOver() {
+    const cl = Math.min(35, Math.max(21, Number(cycleLength) || DEFAULT_CYCLE_LENGTH));
+    setShowPeriodStillOn(false);
+    navigate(cl, DEFAULT_BLEED_DAYS);
   }
 
   return (
@@ -164,6 +209,59 @@ export default function HomePage() {
       >
         Continue
       </button>
+
+      {showPeriodStillOn && (
+        <section
+          style={{
+            marginTop: "1.5rem",
+            padding: "1rem 1.25rem",
+            borderRadius: 12,
+            border: "1px solid var(--input-border)",
+            background: "var(--input-bg)",
+          }}
+        >
+          <div style={{ fontSize: "0.9375rem", fontWeight: 600, marginBottom: "0.5rem" }}>
+            That date was {daysAgo()} day{daysAgo() !== 1 ? "s" : ""} ago. Is her period still going?
+          </div>
+          <p style={{ fontSize: "0.8125rem", color: "var(--text-secondary)", marginBottom: "0.75rem", lineHeight: 1.4 }}>
+            We assume it&apos;s over after 5 days unless you tell us otherwise. If it&apos;s still on, we&apos;ll show today as Menstrual phase.
+          </p>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <button
+              type="button"
+              onClick={confirmPeriodStillOn}
+              style={{
+                padding: "0.5rem 1rem",
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: "pointer",
+                border: "1px solid var(--button-primary)",
+                borderRadius: 10,
+                background: "var(--button-primary)",
+                color: "var(--button-primary-color)",
+              }}
+            >
+              Yes, still on
+            </button>
+            <button
+              type="button"
+              onClick={confirmPeriodOver}
+              style={{
+                padding: "0.5rem 1rem",
+                fontSize: 14,
+                fontWeight: 600,
+                cursor: "pointer",
+                border: "1px solid var(--input-border)",
+                borderRadius: 10,
+                background: "var(--background)",
+                color: "var(--foreground)",
+              }}
+            >
+              No, it&apos;s over
+            </button>
+          </div>
+        </section>
+      )}
 
       <p style={{ marginTop: "1.5rem", fontSize: "0.8125rem", color: "var(--text-secondary)", lineHeight: 1.4 }}>
         <strong>Disclaimer:</strong> For informational use only. Not for contraception or medical decisions. Not medical advice. Consult a healthcare provider for health decisions.

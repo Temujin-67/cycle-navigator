@@ -145,10 +145,10 @@ function moodEmojiForPhase(phase: Phase): string {
 }
 
 function libidoEmojiForPhase(phase: Phase): string {
-  if (phase === "Menstrual" || phase === "PMS") return "🚫";
-  if (phase === "Ovulatory") return "🔥";
-  if (phase === "Follicular") return "❄️"; // building
-  return "❄️"; // Luteal: moderate
+  if (phase === "Menstrual" || phase === "PMS") return "🚫"; // none / leave it
+  if (phase === "Ovulatory") return "🔥"; // high
+  if (phase === "Follicular") return "📈"; // building / rising
+  return "🟡"; // Luteal: moderate / variable
 }
 
 function stressEmojiForPhase(phase: Phase): string {
@@ -387,7 +387,7 @@ function RiskChip({ risk }: { risk: RiskLevel }) {
       }}
     >
       <span aria-hidden="true">{s.emoji}</span>
-      Risk: {risk}
+      Conflict risk: {risk}
     </span>
   );
 }
@@ -440,7 +440,7 @@ function DayCard({ d }: { d: DayInfo }) {
         {row(libidoEmojiForPhase(d.phase), "Libido", d.libido)}
         {row(stressEmojiForPhase(d.phase), "Stress", d.stress)}
         {row("💬", "Communication", d.communication)}
-        {row("▶️", "Play", d.play)}
+        {row("🎯", "Today strategy", d.play)}
         {row("🚫", "Avoid", d.avoid)}
         {row("🤰", "Pregnancy odds", d.fertility)}
       </div>
@@ -541,7 +541,7 @@ function NavigateInner() {
 
   const [shareCopied, setShareCopied] = useState(false);
   function copyWeekSummary() {
-    const lines = weekDays.map((d) => `${fmt(d.date)} · Day ${d.dayIndex} · ${d.phase} phase · Risk: ${d.risk}`);
+    const lines = weekDays.map((d) => `${fmt(d.date)} · Day ${d.dayIndex} · ${d.phase} phase · Conflict risk: ${d.risk}`);
     const text = `Cycle Forecast – Next 7 days\n${lines.join("\n")}`;
     if (typeof navigator !== "undefined" && navigator.clipboard) {
       navigator.clipboard.writeText(text).then(() => setShareCopied(true));
@@ -630,7 +630,7 @@ function NavigateInner() {
           <div style={{ fontSize: 22, fontWeight: 1000 as any, letterSpacing: -0.2 }}>Cycle Forecast</div>
           {delta === 0 && (
             <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 2 }}>
-              Today: {build(baseOffset).phase} phase — Risk: {build(baseOffset).risk}
+              Today: {build(baseOffset).phase} phase — Conflict risk: {build(baseOffset).risk}
             </div>
           )}
         </div>
@@ -755,7 +755,7 @@ function NavigateInner() {
               <span style={{ fontWeight: 700 }}>{fmt(d.date)}</span>
               <span>Day {d.dayIndex}</span>
               <span>{d.phase} phase</span>
-              <span>Risk: {d.risk}</span>
+              <span>Conflict risk: {d.risk}</span>
             </div>
           ))}
         </div>
