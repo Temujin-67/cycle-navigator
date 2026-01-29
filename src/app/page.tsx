@@ -87,7 +87,7 @@ export default function HomePage() {
       </div>
 
       <p style={{ fontSize: "0.9375rem", color: "var(--text-secondary)", lineHeight: 1.45, marginBottom: "1.5rem" }}>
-        Hormonal cycle patterns. Fewer arguments, better relationship. Individual responses differ.
+        Hormonal cycle patterns. Fewer arguments, better days.
       </p>
 
       <label style={{ display: "block", marginTop: "1.25rem", fontSize: "0.9375rem", fontWeight: 600 }}>
