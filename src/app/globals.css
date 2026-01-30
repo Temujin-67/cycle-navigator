@@ -1,31 +1,45 @@
-+/* --------------------------------------------------
-+   Global design tokens (used by Home + Navigate)
-+   -------------------------------------------------- */
-+:root {
-+  --background: #ffffff;
-+  --foreground: #0a0a0a;
-+  --text-secondary: #555555;
-+
-+  --input-bg: #ffffff;
-+  --input-border: #d1d5db;
-+  --input-focus-border: #16a34a;
-+
-+  --button-primary: #16a34a;
-+  --button-primary-hover: #15803d;
-+  --button-primary-color: #ffffff;
-+}
-+
-+html[data-theme="dark"] {
-+  --background: #0a0a0a;
-+  --foreground: #ffffff;
-+  --text-secondary: #a1a1aa;
-+
-+  --input-bg: #111111;
-+  --input-border: #3f3f46;
-+  --input-focus-border: #22c55e;
-+
-+  --button-primary: #22c55e;
-+  --button-primary-hover: #16a34a;
-+  --button-primary-color: #0a0a0a;
-+}
+You are editing an existing Next.js app. ABSOLUTE CONSTRAINTS:
+- Minimal delta only. NO refactor. NO reformat. NO moving blocks. NO renaming types/props. NO “cleanups”.
+- DO NOT delete anything unless explicitly instructed.
+- Keep the file structure and order intact.
+- If the original file is ~1138 lines, your output must remain ~1138 lines (±20 max). If you output a much shorter file, you FAILED.
+- Return FULL FILES only for the files you touch.
+- Each returned file MUST start with:
+  // CHANGED LINES:
+  // - <path>: <short description of exactly what changed>
 
+GOAL:
+Fix “no colour / no theme variables” and make UI colors reliable across ALL pages (Home + Navigate), without relying on undefined CSS variables.
+
+ISSUES TO FIX:
+1) Home page / app looks “no colour” because CSS vars like:
+   --background, --foreground, --text-secondary, --button-primary, --button-primary-color,
+   --input-border, --input-bg
+   are referenced but not defined globally.
+2) The “Yeah, new cycle” button should ALWAYS look like a button (green bg + white text),
+   even if CSS variables fail. (Explicit inline fallback styling.)
+3) DO NOT break builds: globals.css must be valid CSS (no TS/React).
+4) Keep dark/light theme working with html[data-theme="light"] / html[data-theme="dark"].
+
+FILES:
+A) src/app/globals.css
+- Add :root CSS variable defaults for ALL vars used by Navigate page and Home page.
+- Add html[data-theme="dark"] overrides for those vars.
+- Keep existing reset styles.
+- DO NOT introduce Tailwind.
+
+B) src/app/navigate/page.tsx  (IMPORTANT: DO NOT REWRITE THIS FILE)
+- Minimal delta ONLY:
+  - Add explicit fallback colors for critical UI elements that currently use CSS vars:
+    background, foreground, text-secondary, button-primary/button-primary-color,
+    input-border/input-bg.
+  - Specifically: ensure “Yeah, new cycle” button uses explicit green background + white text,
+    with border green, regardless of vars. Do not change button logic or layout.
+  - Do not remove any code. Do not shorten the file.
+
+OUTPUT REQUIREMENTS:
+- Return TWO full files only:
+  1) src/app/globals.css
+  2) src/app/navigate/page.tsx
+- Both must include the // CHANGED LINES header at the top.
+- Explain NOTHING. Output only the two files.
