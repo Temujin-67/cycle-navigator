@@ -985,6 +985,8 @@ function NavigateInner() {
       {showNewPeriodQuestion && (
         <section
           style={{
+            position: "relative",
+            zIndex: 10,
             marginTop: 12,
             borderRadius: 16,
             padding: 14,
