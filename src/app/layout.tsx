@@ -1,3 +1,6 @@
+// CHANGED LINES:
+// - src/app/layout.tsx: inside `export const metadata` block — removed merge conflict markers and merged fields (kept Cycle Forecast title/description, retained manifest + appleWebApp, aligned appleWebApp.title to "Cycle Forecast").
+
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
@@ -24,19 +27,15 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-<<<<<<< HEAD
   title: "Cycle Forecast",
-  description: "Know her cycle phase. Best and worst days for conversations, libido, pregnancy. Fewer arguments, better relationship.",
-=======
-  title: "Cycle Navigator",
-  description: "Cycle Navigator app",
+  description:
+    "Know her cycle phase. Best and worst days for conversations, libido, pregnancy. Fewer arguments, better relationship.",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
     statusBarStyle: "default",
-    title: "Cycle Navigator",
+    title: "Cycle Forecast",
   },
->>>>>>> 990718a (Update cycle phase date ranges)
 };
 
 export default function RootLayout({
@@ -61,3 +60,4 @@ export default function RootLayout({
     </html>
   );
 }
+
