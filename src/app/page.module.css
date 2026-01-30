@@ -11,6 +11,7 @@
 
   display: flex;
   min-height: 100vh;
+  min-height: 100dvh;
   align-items: center;
   justify-content: center;
   font-family: var(--font-geist-sans);
@@ -20,6 +21,7 @@
 .main {
   display: flex;
   min-height: 100vh;
+  min-height: 100dvh;
   width: 100%;
   max-width: 800px;
   flex-direction: column;
@@ -73,8 +75,9 @@
   display: flex;
   justify-content: center;
   align-items: center;
-  height: 40px;
-  padding: 0 16px;
+  min-height: 44px;
+  height: 44px;
+  padding: 0 20px;
   border-radius: 128px;
   border: 1px solid transparent;
   transition: 0.2s;
@@ -119,6 +122,33 @@ a.secondary {
     font-size: 32px;
     line-height: 40px;
     letter-spacing: -1.92px;
+  }
+}
+
+@media (max-width: 400px) {
+  .main {
+    padding: 24px 16px;
+  }
+
+  .intro h1 {
+    font-size: 26px;
+    line-height: 32px;
+    letter-spacing: -1px;
+  }
+
+  .intro p {
+    font-size: 16px;
+    line-height: 28px;
+  }
+
+  .ctas {
+    flex-direction: column;
+    width: 100%;
+    max-width: none;
+  }
+
+  .ctas a {
+    width: 100%;
   }
 }
 

@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -12,9 +12,31 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  viewportFit: "cover",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#0a0a0a" },
+  ],
+};
+
 export const metadata: Metadata = {
+<<<<<<< HEAD
   title: "Cycle Forecast",
   description: "Know her cycle phase. Best and worst days for conversations, libido, pregnancy. Fewer arguments, better relationship.",
+=======
+  title: "Cycle Navigator",
+  description: "Cycle Navigator app",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "Cycle Navigator",
+  },
+>>>>>>> 990718a (Update cycle phase date ranges)
 };
 
 export default function RootLayout({
