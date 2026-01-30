@@ -482,6 +482,14 @@ function NavigateInner() {
   const [dismissBleedPrompt, setDismissBleedPrompt] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const [hidePregnancy, setHidePregnancy] = useState(false);
+  const [phaseBoxOpen, setPhaseBoxOpen] = useState({
+    bestTalk: false,
+    worstTalk: false,
+    bestLibido: false,
+    worstLibido: false,
+    bestPregnancy: false,
+    bestHardChat: false,
+  });
 
   React.useEffect(() => {
     try {
@@ -819,7 +827,7 @@ function NavigateInner() {
         </div>
       </div>
 
-      {/* Best day / Worst day for this cycle */}
+      {/* Best day / Worst day for this cycle — collapsible, closed by default */}
       <section style={{ marginTop: 14 }}>
         <div
           style={{
@@ -828,79 +836,79 @@ function NavigateInner() {
             gap: 10,
           }}
         >
-          <div
-            style={{
-              padding: 12,
-              borderRadius: 12,
-              background: "#F1FFF5",
-              border: "1px solid #16A34A",
-            }}
-          >
-            <div style={{ fontSize: 11, fontWeight: 800, color: "#0B6B45", marginBottom: 4 }}>Best time to talk</div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground, #171717)" }}>{formatDayRangeAsDates(day1, ranges.bestTalk)}</div>
-            <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Talk, plan, chill.</div>
+          <div style={{ padding: 12, borderRadius: 12, background: "#F1FFF5", border: "1px solid #16A34A" }}>
+            <button type="button" onClick={() => setPhaseBoxOpen((p) => ({ ...p, bestTalk: !p.bestTalk }))} style={{ width: "100%", textAlign: "left", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, border: "none", background: "transparent", cursor: "pointer", padding: 0 }}>
+              <span style={{ fontSize: 11, fontWeight: 800, color: "#0B6B45" }}>Best time to talk</span>
+              <span style={{ fontSize: 10 }}>{phaseBoxOpen.bestTalk ? "▼" : "▶"}</span>
+            </button>
+            {phaseBoxOpen.bestTalk && (
+              <>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground, #171717)", marginTop: 6 }}>{formatDayRangeAsDates(day1, ranges.bestTalk)}</div>
+                <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Talk, plan, chill.</div>
+              </>
+            )}
           </div>
-          <div
-            style={{
-              padding: 12,
-              borderRadius: 12,
-              background: "#FFECEC",
-              border: "1px solid #EF4444",
-            }}
-          >
-            <div style={{ fontSize: 11, fontWeight: 800, color: "#7F1D1D", marginBottom: 4 }}>Worst time for</div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground, #171717)" }}>{formatDayRangeAsDates(day1, ranges.worstTalk)}</div>
-            <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Heavy talks, pushing for answers, rows.</div>
+          <div style={{ padding: 12, borderRadius: 12, background: "#FFECEC", border: "1px solid #EF4444" }}>
+            <button type="button" onClick={() => setPhaseBoxOpen((p) => ({ ...p, worstTalk: !p.worstTalk }))} style={{ width: "100%", textAlign: "left", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, border: "none", background: "transparent", cursor: "pointer", padding: 0 }}>
+              <span style={{ fontSize: 11, fontWeight: 800, color: "#7F1D1D" }}>Worst time for</span>
+              <span style={{ fontSize: 10 }}>{phaseBoxOpen.worstTalk ? "▼" : "▶"}</span>
+            </button>
+            {phaseBoxOpen.worstTalk && (
+              <>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground, #171717)", marginTop: 6 }}>{formatDayRangeAsDates(day1, ranges.worstTalk)}</div>
+                <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Heavy talks, pushing for answers, rows.</div>
+              </>
+            )}
           </div>
         </div>
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-            gap: 10,
-            marginTop: 10,
-          }}
-        >
-          <div
-            style={{
-              padding: 12,
-              borderRadius: 12,
-              background: "#FFF7E6",
-              border: "1px solid #F59E0B",
-            }}
-          >
-            <div style={{ fontSize: 11, fontWeight: 800, color: "#7A4B00", marginBottom: 4 }}>Best for libido</div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground, #171717)" }}>{formatDayRangeAsDates(day1, ranges.bestLibido)}</div>
-            <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>She's up for it. You'll know.</div>
+        <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10, marginTop: 10 }}>
+          <div style={{ padding: 12, borderRadius: 12, background: "#FFF7E6", border: "1px solid #F59E0B" }}>
+            <button type="button" onClick={() => setPhaseBoxOpen((p) => ({ ...p, bestLibido: !p.bestLibido }))} style={{ width: "100%", textAlign: "left", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, border: "none", background: "transparent", cursor: "pointer", padding: 0 }}>
+              <span style={{ fontSize: 11, fontWeight: 800, color: "#7A4B00" }}>Best for libido</span>
+              <span style={{ fontSize: 10 }}>{phaseBoxOpen.bestLibido ? "▼" : "▶"}</span>
+            </button>
+            {phaseBoxOpen.bestLibido && (
+              <>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground, #171717)", marginTop: 6 }}>{formatDayRangeAsDates(day1, ranges.bestLibido)}</div>
+                <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>She&apos;s up for it. You&apos;ll know.</div>
+              </>
+            )}
           </div>
-          <div
-            style={{
-              padding: 12,
-              borderRadius: 12,
-              background: "#FFECEC",
-              border: "1px solid #EF4444",
-            }}
-          >
-            <div style={{ fontSize: 11, fontWeight: 800, color: "#7F1D1D", marginBottom: 4 }}>Worst for libido</div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground, #171717)" }}>{formatMultipleRanges(day1, ranges.worstLibido)}</div>
-            <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Not in the mood. Don't push it.</div>
+          <div style={{ padding: 12, borderRadius: 12, background: "#FFECEC", border: "1px solid #EF4444" }}>
+            <button type="button" onClick={() => setPhaseBoxOpen((p) => ({ ...p, worstLibido: !p.worstLibido }))} style={{ width: "100%", textAlign: "left", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, border: "none", background: "transparent", cursor: "pointer", padding: 0 }}>
+              <span style={{ fontSize: 11, fontWeight: 800, color: "#7F1D1D" }}>Worst for libido</span>
+              <span style={{ fontSize: 10 }}>{phaseBoxOpen.worstLibido ? "▼" : "▶"}</span>
+            </button>
+            {phaseBoxOpen.worstLibido && (
+              <>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground, #171717)", marginTop: 6 }}>{formatMultipleRanges(day1, ranges.worstLibido)}</div>
+                <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Not in the mood. Don&apos;t push it.</div>
+              </>
+            )}
           </div>
-          <div
-            style={{
-              padding: 12,
-              borderRadius: 12,
-              background: "#EEF7FF",
-              border: "1px solid #2563EB",
-            }}
-          >
-            <div style={{ fontSize: 11, fontWeight: 800, color: "#0B4A84", marginBottom: 4 }}>Best for pregnancy</div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground, #171717)" }}>{formatDayRangeAsDates(day1, ranges.bestPregnancy)}</div>
-            <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Fertile window. Highest odds.</div>
+          <div style={{ padding: 12, borderRadius: 12, background: "#EEF7FF", border: "1px solid #2563EB" }}>
+            <button type="button" onClick={() => setPhaseBoxOpen((p) => ({ ...p, bestPregnancy: !p.bestPregnancy }))} style={{ width: "100%", textAlign: "left", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, border: "none", background: "transparent", cursor: "pointer", padding: 0 }}>
+              <span style={{ fontSize: 11, fontWeight: 800, color: "#0B4A84" }}>Best for pregnancy</span>
+              <span style={{ fontSize: 10 }}>{phaseBoxOpen.bestPregnancy ? "▼" : "▶"}</span>
+            </button>
+            {phaseBoxOpen.bestPregnancy && (
+              <>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground, #171717)", marginTop: 6 }}>{formatDayRangeAsDates(day1, ranges.bestPregnancy)}</div>
+                <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Fertile window. Highest odds.</div>
+              </>
+            )}
           </div>
         </div>
         <div style={{ marginTop: 10, padding: 12, borderRadius: 12, background: "#F1FFF5", border: "1px solid #16A34A" }}>
-          <div style={{ fontSize: 11, fontWeight: 800, color: "#0B6B45", marginBottom: 4 }}>Best time for the hard chat</div>
-          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground, #171717)" }}>{formatDayRangeAsDates(day1, ranges.bestTalk)} (Follicular phase)</div>
+          <button type="button" onClick={() => setPhaseBoxOpen((p) => ({ ...p, bestHardChat: !p.bestHardChat }))} style={{ width: "100%", textAlign: "left", display: "flex", justifyContent: "space-between", alignItems: "center", gap: 8, border: "none", background: "transparent", cursor: "pointer", padding: 0 }}>
+            <span style={{ fontSize: 11, fontWeight: 800, color: "#0B6B45" }}>Best time for the hard chat</span>
+            <span style={{ fontSize: 10 }}>{phaseBoxOpen.bestHardChat ? "▼" : "▶"}</span>
+          </button>
+          {phaseBoxOpen.bestHardChat && (
+            <>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground, #171717)", marginTop: 6 }}>{formatDayRangeAsDates(day1, ranges.bestTalk)} (Follicular phase)</div>
+            </>
+          )}
         </div>
         {cycleHistory.length > 0 && (
           <div style={{ marginTop: 10, fontSize: 11, color: "var(--text-secondary, #444444)" }}>
@@ -986,7 +994,7 @@ function NavigateInner() {
         <section
           style={{
             position: "relative",
-            zIndex: 10,
+            zIndex: 100,
             marginTop: 12,
             borderRadius: 16,
             padding: 14,
@@ -1023,7 +1031,7 @@ function NavigateInner() {
         </section>
       )}
 
-      <div style={{ marginTop: 14 }}>
+      <div style={{ marginTop: 14, position: "relative", zIndex: showNewPeriodQuestion ? 0 : undefined }}>
         <div
           onPointerDown={onPointerDown}
           onPointerMove={onPointerMove}
