@@ -1,5 +1,7 @@
 // CHANGED LINES:
-// - src/app/layout.tsx: inside `export const metadata` block — removed merge conflict markers and merged fields (kept Cycle Forecast title/description, retained manifest + appleWebApp, aligned appleWebApp.title to "Cycle Forecast").
+// - src/app/layout.tsx: metadata block — removed conflict markers and merged fields.
+//   Kept: Cycle Forecast title/description (existing behaviour/copy)
+//   Preserved: manifest + appleWebApp (from the other side), aligned titles to Cycle Forecast.
 
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
@@ -60,4 +62,3 @@ export default function RootLayout({
     </html>
   );
 }
-
