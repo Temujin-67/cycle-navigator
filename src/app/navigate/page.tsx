@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link"; 
+import Link from "next/link";
 import React, { Suspense, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
@@ -370,8 +370,8 @@ function PhaseChip({ phase }: { phase: Phase }) {
         padding: "7px 12px",
         borderRadius: 999,
         border: `1px solid ${s.border}`,
-        background: "var(--background)",
-        color: "var(--foreground)",
+        background: "var(--background, #ffffff)",
+        color: "var(--foreground, #171717)",
         fontSize: 12,
         fontWeight: 900,
       }}
@@ -425,8 +425,8 @@ function DayCard({ d, hidePregnancy }: { d: DayInfo; hidePregnancy?: boolean }) 
     <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
       <div style={{ width: 26, textAlign: "center", fontSize: 16 }}>{emoji}</div>
       <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: 0.2, color: "var(--foreground)" }}>{label}</div>
-        <div style={{ fontSize: 15, lineHeight: 1.35, color: "var(--foreground)", marginTop: 2 }}>{value}</div>
+        <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: 0.2, color: "var(--foreground, #171717)" }}>{label}</div>
+        <div style={{ fontSize: 15, lineHeight: 1.35, color: "var(--foreground, #171717)", marginTop: 2 }}>{value}</div>
       </div>
     </div>
   );
@@ -443,9 +443,9 @@ function DayCard({ d, hidePregnancy }: { d: DayInfo; hidePregnancy?: boolean }) 
     >
       <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "baseline" }}>
         <div style={{ fontWeight: 1000 as any, fontSize: 18 }}>
-          {fmt(d.date)} <span style={{ color: "var(--text-secondary)", fontSize: 13 }}>· Day {d.dayIndex}</span>
+          {fmt(d.date)} <span style={{ color: "var(--text-secondary, #444444)", fontSize: 13 }}>· Day {d.dayIndex}</span>
         </div>
-        <div style={{ color: "var(--text-secondary)", fontSize: 12 }}>Swipe or use buttons</div>
+        <div style={{ color: "var(--text-secondary, #444444)", fontSize: 12 }}>Swipe or use buttons</div>
       </div>
 
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 12 }}>
@@ -463,7 +463,7 @@ function DayCard({ d, hidePregnancy }: { d: DayInfo; hidePregnancy?: boolean }) 
         {!hidePregnancy && row("🤰", "Pregnancy odds", d.fertility)}
       </div>
 
-      <div style={{ marginTop: 14, fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.35 }}>
+      <div style={{ marginTop: 14, fontSize: 12, color: "var(--text-secondary, #444444)", lineHeight: 1.35 }}>
         <strong><Link href="/disclaimer" style={{ color: "inherit", textDecoration: "underline" }}>Disclaimer</Link>:</strong> Info only. Not for contraception or medical decisions. Not medical advice.
       </div>
     </section>
@@ -481,7 +481,6 @@ function NavigateInner() {
 
   const [dismissBleedPrompt, setDismissBleedPrompt] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [showNewCycleConfirm, setShowNewCycleConfirm] = useState(false);
   const [hidePregnancy, setHidePregnancy] = useState(false);
 
   React.useEffect(() => {
@@ -560,7 +559,6 @@ function NavigateInner() {
   }
 
   function startNewCycle() {
-    setShowNewCycleConfirm(false);
     setMenuOpen(false);
     const d = new Date();
     const newDay1Str = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -672,15 +670,15 @@ function NavigateInner() {
         margin: "18px auto",
         padding: 14,
         fontFamily: "system-ui",
-        color: "var(--foreground)",
-        background: "var(--background)",
+        color: "var(--foreground, #171717)",
+        background: "var(--background, #ffffff)",
       }}
     >
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
         <div>
           <div style={{ fontSize: 22, fontWeight: 1000 as any, letterSpacing: -0.2 }}>Cycle Forecast</div>
           {delta === 0 && (
-            <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 2 }}>
+            <div style={{ fontSize: 12, color: "var(--text-secondary, #444444)", marginTop: 2 }}>
               Today: {build(baseOffset).phase} phase — Conflict risk: {build(baseOffset).risk}
             </div>
           )}
@@ -699,10 +697,10 @@ function NavigateInner() {
               aria-label="Menu"
               style={{
                 padding: "6px 8px",
-                border: "1px solid var(--input-border)",
+                border: "1px solid var(--input-border, #e0e0e0)",
                 borderRadius: 8,
-                background: "var(--input-bg)",
-                color: "var(--foreground)",
+                background: "var(--input-bg, #fafafa)",
+                color: "var(--foreground, #171717)",
                 cursor: "pointer",
                 fontSize: 18,
                 lineHeight: 1,
@@ -713,21 +711,21 @@ function NavigateInner() {
             {menuOpen && (
               <>
                 <div
-                  style={{ position: "fixed", inset: 0, zIndex: 10 }}
+                  style={{ position: "fixed", inset: 0, zIndex: 50 }}
                   onClick={() => setMenuOpen(false)}
                   aria-hidden="true"
                 />
                 <div
                   style={{
-                    position: "absolute",
-                    right: 0,
-                    top: "100%",
-                    marginTop: 4,
-                    zIndex: 20,
+                    position: "fixed",
+                    top: 56,
+                    right: 14,
+                    zIndex: 51,
                     minWidth: 200,
                     padding: "8px 0",
-                    background: "var(--background)",
-                    border: "1px solid var(--input-border)",
+                    background: "#ffffff",
+                    color: "#171717",
+                    border: "1px solid #e0e0e0",
                     borderRadius: 12,
                     boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
                   }}
@@ -735,7 +733,7 @@ function NavigateInner() {
                   <button
                     type="button"
                     onClick={() => {
-                      setShowNewCycleConfirm(true);
+                      startNewCycle();
                       setMenuOpen(false);
                     }}
                     style={{
@@ -745,7 +743,7 @@ function NavigateInner() {
                       textAlign: "left",
                       border: "none",
                       background: "transparent",
-                      color: "var(--foreground)",
+                      color: "#171717",
                       fontSize: 14,
                       fontWeight: 600,
                       cursor: "pointer",
@@ -759,7 +757,7 @@ function NavigateInner() {
                       display: "block",
                       padding: "10px 14px",
                       textAlign: "left",
-                      color: "var(--foreground)",
+                      color: "#171717",
                       fontSize: 14,
                       fontWeight: 600,
                       textDecoration: "none",
@@ -778,7 +776,7 @@ function NavigateInner() {
                       textAlign: "left",
                       border: "none",
                       background: "transparent",
-                      color: "var(--foreground)",
+                      color: "#171717",
                       fontSize: 14,
                       fontWeight: 600,
                       cursor: "pointer",
@@ -791,7 +789,7 @@ function NavigateInner() {
                     style={{
                       display: "block",
                       padding: "10px 14px",
-                      color: "var(--foreground)",
+                      color: "#171717",
                       fontSize: 14,
                       fontWeight: 600,
                       textDecoration: "none",
@@ -805,7 +803,7 @@ function NavigateInner() {
                     style={{
                       display: "block",
                       padding: "10px 14px",
-                      color: "var(--foreground)",
+                      color: "#171717",
                       fontSize: 14,
                       fontWeight: 600,
                       textDecoration: "none",
@@ -820,56 +818,6 @@ function NavigateInner() {
           </div>
         </div>
       </div>
-
-      {showNewCycleConfirm && (
-        <section
-          style={{
-            marginTop: 12,
-            borderRadius: 16,
-            padding: 14,
-            border: "1px solid var(--button-primary)",
-            background: "#F1FFF5",
-            boxShadow: "0 1px 0 rgba(0,0,0,0.05)",
-          }}
-        >
-          <div style={{ fontWeight: 1000 as any, color: "var(--foreground)", marginBottom: 6 }}>
-            Confirm new cycle
-          </div>
-          <div style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 12 }}>
-            This cycle was {current.dayIndex} days. New average: {newCyclePreviewAvg} days.
-          </div>
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            <button
-              onClick={startNewCycle}
-              style={{
-                border: "1px solid var(--button-primary)",
-                background: "var(--button-primary)",
-                color: "var(--button-primary-color)",
-                padding: "10px 12px",
-                borderRadius: 12,
-                fontWeight: 1000 as any,
-                cursor: "pointer",
-              }}
-            >
-              Confirm
-            </button>
-            <button
-              onClick={() => setShowNewCycleConfirm(false)}
-              style={{
-                border: "1px solid var(--input-border)",
-                background: "var(--background)",
-                color: "var(--foreground)",
-                padding: "10px 12px",
-                borderRadius: 12,
-                fontWeight: 1000 as any,
-                cursor: "pointer",
-              }}
-            >
-              Cancel
-            </button>
-          </div>
-        </section>
-      )}
 
       {/* Best day / Worst day for this cycle */}
       <section style={{ marginTop: 14 }}>
@@ -889,7 +837,7 @@ function NavigateInner() {
             }}
           >
             <div style={{ fontSize: 11, fontWeight: 800, color: "#0B6B45", marginBottom: 4 }}>Best time to talk</div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{formatDayRangeAsDates(day1, ranges.bestTalk)}</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground, #171717)" }}>{formatDayRangeAsDates(day1, ranges.bestTalk)}</div>
             <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Talk, plan, chill.</div>
           </div>
           <div
@@ -901,7 +849,7 @@ function NavigateInner() {
             }}
           >
             <div style={{ fontSize: 11, fontWeight: 800, color: "#7F1D1D", marginBottom: 4 }}>Worst time for</div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{formatDayRangeAsDates(day1, ranges.worstTalk)}</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground, #171717)" }}>{formatDayRangeAsDates(day1, ranges.worstTalk)}</div>
             <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Heavy talks, pushing for answers, rows.</div>
           </div>
         </div>
@@ -922,7 +870,7 @@ function NavigateInner() {
             }}
           >
             <div style={{ fontSize: 11, fontWeight: 800, color: "#7A4B00", marginBottom: 4 }}>Best for libido</div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{formatDayRangeAsDates(day1, ranges.bestLibido)}</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground, #171717)" }}>{formatDayRangeAsDates(day1, ranges.bestLibido)}</div>
             <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>She's up for it. You'll know.</div>
           </div>
           <div
@@ -934,7 +882,7 @@ function NavigateInner() {
             }}
           >
             <div style={{ fontSize: 11, fontWeight: 800, color: "#7F1D1D", marginBottom: 4 }}>Worst for libido</div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{formatMultipleRanges(day1, ranges.worstLibido)}</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground, #171717)" }}>{formatMultipleRanges(day1, ranges.worstLibido)}</div>
             <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Not in the mood. Don't push it.</div>
           </div>
           <div
@@ -946,16 +894,16 @@ function NavigateInner() {
             }}
           >
             <div style={{ fontSize: 11, fontWeight: 800, color: "#0B4A84", marginBottom: 4 }}>Best for pregnancy</div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{formatDayRangeAsDates(day1, ranges.bestPregnancy)}</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground, #171717)" }}>{formatDayRangeAsDates(day1, ranges.bestPregnancy)}</div>
             <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Fertile window. Highest odds.</div>
           </div>
         </div>
         <div style={{ marginTop: 10, padding: 12, borderRadius: 12, background: "#F1FFF5", border: "1px solid #16A34A" }}>
           <div style={{ fontSize: 11, fontWeight: 800, color: "#0B6B45", marginBottom: 4 }}>Best time for the hard chat</div>
-          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{formatDayRangeAsDates(day1, ranges.bestTalk)} (Follicular phase)</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground, #171717)" }}>{formatDayRangeAsDates(day1, ranges.bestTalk)} (Follicular phase)</div>
         </div>
         {cycleHistory.length > 0 && (
-          <div style={{ marginTop: 10, fontSize: 11, color: "var(--text-secondary)" }}>
+          <div style={{ marginTop: 10, fontSize: 11, color: "var(--text-secondary, #444444)" }}>
             Last {cycleHistory.length} cycle{cycleHistory.length !== 1 ? "s" : ""}: {cycleHistory.join(", ")} days
           </div>
         )}
@@ -967,13 +915,13 @@ function NavigateInner() {
             marginTop: 12,
             borderRadius: 16,
             padding: 14,
-            border: "1px solid var(--input-border)",
-            background: "var(--background)",
+            border: "1px solid var(--input-border, #e0e0e0)",
+            background: "var(--background, #ffffff)",
             boxShadow: "0 1px 0 rgba(0,0,0,0.05)",
           }}
         >
-          <div style={{ fontWeight: 1000 as any, color: "var(--foreground)" }}>Day {current.dayIndex}: still on?</div>
-          <div style={{ marginTop: 6, fontSize: 13, color: "var(--text-secondary)" }}>
+          <div style={{ fontWeight: 1000 as any, color: "var(--foreground, #171717)" }}>Day {current.dayIndex}: still on?</div>
+          <div style={{ marginTop: 6, fontSize: 13, color: "var(--text-secondary, #444444)" }}>
             Usually 5–7 days. Tell us when it's over so the phases line up.
           </div>
 
@@ -981,9 +929,9 @@ function NavigateInner() {
             <button
               onClick={extendBleedToCurrentDay}
               style={{
-                border: "1px solid var(--button-primary)",
-                background: "var(--button-primary)",
-                color: "var(--button-primary-color)",
+                border: "1px solid var(--button-primary, #16A34A)",
+                background: "var(--button-primary, #16A34A)",
+                color: "var(--button-primary-color, #ffffff)",
                 padding: "10px 12px",
                 borderRadius: 12,
                 fontWeight: 1000 as any,
@@ -996,9 +944,9 @@ function NavigateInner() {
             <button
               onClick={() => setDismissBleedPrompt(true)}
               style={{
-                border: "1px solid var(--input-border)",
-                background: "var(--background)",
-                color: "var(--foreground)",
+                border: "1px solid var(--input-border, #e0e0e0)",
+                background: "var(--background, #ffffff)",
+                color: "var(--foreground, #171717)",
                 padding: "10px 12px",
                 borderRadius: 12,
                 fontWeight: 1000 as any,
@@ -1010,7 +958,7 @@ function NavigateInner() {
           </div>
 
           {current.dayIndex > 2 && (
-            <div style={{ marginTop: 12, fontSize: 12, color: "var(--text-secondary)" }}>
+            <div style={{ marginTop: 12, fontSize: 12, color: "var(--text-secondary, #444444)" }}>
               Ended earlier — day{" "}
               <select
                 value={bleedOverride}
@@ -1018,7 +966,7 @@ function NavigateInner() {
                 style={{
                   padding: "6px 8px",
                   borderRadius: 8,
-                  border: "1px solid var(--input-border)",
+                  border: "1px solid var(--input-border, #e0e0e0)",
                   fontWeight: 700,
                   cursor: "pointer",
                 }}
@@ -1034,7 +982,7 @@ function NavigateInner() {
         </section>
       )}
 
-      {showNewPeriodQuestion && !showNewCycleConfirm && (
+      {showNewPeriodQuestion && (
         <section
           style={{
             marginTop: 12,
@@ -1045,19 +993,19 @@ function NavigateInner() {
             boxShadow: "0 1px 0 rgba(0,0,0,0.05)",
           }}
         >
-          <div style={{ fontWeight: 1000 as any, color: "var(--foreground)" }}>
+          <div style={{ fontWeight: 1000 as any, color: "var(--foreground, #171717)" }}>
             {isOverdueBanner ? "Cycle overdue – ready to start a new one?" : "New cycle started?"}
           </div>
-          <div style={{ marginTop: 6, fontSize: 13, color: "var(--text-secondary)" }}>
+          <div style={{ marginTop: 6, fontSize: 13, color: "var(--text-secondary, #444444)" }}>
             Tap to start fresh. We&apos;ll use this length ({current.dayIndex} days) for the next cycle.
           </div>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
             <button
-              onClick={() => setShowNewCycleConfirm(true)}
+              onClick={startNewCycle}
               style={{
-                border: "1px solid var(--button-primary)",
-                background: "var(--button-primary)",
-                color: "var(--button-primary-color)",
+                border: "1px solid #16A34A",
+                background: "#16A34A",
+                color: "#ffffff",
                 padding: "10px 12px",
                 borderRadius: 12,
                 fontWeight: 1000 as any,
@@ -1067,7 +1015,7 @@ function NavigateInner() {
               Yeah, new cycle
             </button>
           </div>
-          <div style={{ marginTop: 8, fontSize: 12, color: "var(--text-secondary)" }}>
+          <div style={{ marginTop: 8, fontSize: 12, color: "var(--text-secondary, #444444)" }}>
             If not yet, swipe to another day.
           </div>
         </section>
@@ -1097,9 +1045,9 @@ function NavigateInner() {
             onClick={() => setDelta((v) => Math.max(v - 1, -baseOffset))}
             style={{
               flex: 1,
-              border: "1px solid var(--input-border)",
-              background: "var(--background)",
-              color: "var(--foreground)",
+              border: "1px solid var(--input-border, #e0e0e0)",
+              background: "var(--background, #ffffff)",
+              color: "var(--foreground, #171717)",
               padding: "10px 12px",
               borderRadius: 12,
               fontWeight: 1000 as any,
@@ -1112,9 +1060,9 @@ function NavigateInner() {
             onClick={() => setDelta((v) => v + 1)}
             style={{
               flex: 1,
-              border: "1px solid var(--button-primary)",
-              background: "var(--button-primary)",
-              color: "var(--button-primary-color)",
+              border: "1px solid var(--button-primary, #16A34A)",
+              background: "var(--button-primary, #16A34A)",
+              color: "var(--button-primary-color, #ffffff)",
               padding: "10px 12px",
               borderRadius: 12,
               fontWeight: 1000 as any,
