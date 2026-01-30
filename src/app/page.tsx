@@ -368,6 +368,65 @@ function HomePageContent() {
         </section>
       )}
 
+      {showPeriodEndQuestion && (
+        <section
+          style={{
+            marginTop: "1.5rem",
+            padding: "1rem 1.25rem",
+            borderRadius: 12,
+            border: "1px solid var(--input-border)",
+            background: "var(--input-bg)",
+          }}
+        >
+          <div style={{ fontSize: "0.9375rem", fontWeight: 600, marginBottom: "0.5rem" }}>
+            When did her period end?
+          </div>
+          <p style={{ fontSize: "0.8125rem", color: "var(--text-secondary)", marginBottom: "0.75rem", lineHeight: 1.4 }}>
+            Pick the day of her cycle it ended (Day 1 = first day of period).
+          </p>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: "0.75rem" }}>
+            <label style={{ fontSize: "0.875rem", fontWeight: 600 }}>Ended on day</label>
+            <select
+              value={periodEndDay}
+              onChange={(e) => setPeriodEndDay(Number(e.target.value))}
+              style={{
+                padding: "0.5rem 0.75rem",
+                fontSize: "1rem",
+                border: "1px solid var(--input-border)",
+                borderRadius: 10,
+                background: "var(--input-bg)",
+                color: "var(--foreground)",
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              {Array.from({ length: Math.min(7, daysAgo()) }, (_, i) => i + 1).map((d) => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button
+            type="button"
+            onClick={confirmPeriodEndDay}
+            style={{
+              width: "100%",
+              padding: "0.75rem 1rem",
+              fontSize: "1rem",
+              fontWeight: 600,
+              cursor: "pointer",
+              border: "none",
+              borderRadius: 10,
+              background: "var(--button-primary)",
+              color: "var(--button-primary-color)",
+            }}
+          >
+            Continue
+          </button>
+        </section>
+      )}
+
       <p style={{ marginTop: "1.5rem", fontSize: "0.8125rem", color: "var(--text-secondary)", lineHeight: 1.4 }}>
         <strong>Disclaimer:</strong> Info only. Not for contraception or medical decisions. Not medical advice. <Link href="/disclaimer" style={{ fontWeight: 600, textDecoration: "underline" }}>Full disclaimer &amp; terms</Link>
       </p>
