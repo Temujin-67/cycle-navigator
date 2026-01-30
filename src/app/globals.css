@@ -1,42 +1,31 @@
-/* CHANGED LINES:
- - src/app/globals.css: full file replaced (it incorrectly contained TypeScript/React).
-   This restores a valid CSS stylesheet so Next/Turbopack can build again.
-*/
++/* --------------------------------------------------
++   Global design tokens (used by Home + Navigate)
++   -------------------------------------------------- */
++:root {
++  --background: #ffffff;
++  --foreground: #0a0a0a;
++  --text-secondary: #555555;
++
++  --input-bg: #ffffff;
++  --input-border: #d1d5db;
++  --input-focus-border: #16a34a;
++
++  --button-primary: #16a34a;
++  --button-primary-hover: #15803d;
++  --button-primary-color: #ffffff;
++}
++
++html[data-theme="dark"] {
++  --background: #0a0a0a;
++  --foreground: #ffffff;
++  --text-secondary: #a1a1aa;
++
++  --input-bg: #111111;
++  --input-border: #3f3f46;
++  --input-focus-border: #22c55e;
++
++  --button-primary: #22c55e;
++  --button-primary-hover: #16a34a;
++  --button-primary-color: #0a0a0a;
++}
 
-/* Basic reset */
-* {
-  box-sizing: border-box;
-}
-
-html,
-body {
-  padding: 0;
-  margin: 0;
-}
-
-body {
-  min-height: 100vh;
-}
-
-/* Theme support (matches your data-theme usage in layout) */
-html[data-theme="light"] body {
-  background: #ffffff;
-  color: #0a0a0a;
-}
-
-html[data-theme="dark"] body {
-  background: #0a0a0a;
-  color: #ffffff;
-}
-
-/* Links */
-a {
-  color: inherit;
-  text-decoration: none;
-}
-
-/* Images */
-img {
-  max-width: 100%;
-  height: auto;
-}
