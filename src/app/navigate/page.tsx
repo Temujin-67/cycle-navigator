@@ -517,6 +517,11 @@ function NavigateInner() {
 
   const current = useMemo(() => build(viewOffset), [viewOffset, bleedOverride, cycleLength]);
 
+  const ranges = useMemo(
+    () => bestWorstRangesRaw(bleedOverride, cycleLength),
+    [bleedOverride, cycleLength]
+  );
+
   // Ask "period over?" on first day after current assumed bleed (Day 6 if default 5, then 7, 8...)
   const showBleedQuestion = !dismissBleedPrompt && current.dayIndex === bleedOverride + 1;
   // "New period?" from Day 28; no dismiss state – prompt reappears every day until they tap "Yeah, new cycle"
@@ -866,7 +871,7 @@ function NavigateInner() {
             }}
           >
             <div style={{ fontSize: 11, fontWeight: 800, color: "#0B6B45", marginBottom: 4 }}>Best time to talk</div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{formatDayRangeAsDates(day1, ranges.bestTalk)}</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{bestWorstRanges(bleedOverride, cycleLength).bestDays}</div>
             <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Talk, plan, chill.</div>
           </div>
           <div
@@ -878,7 +883,7 @@ function NavigateInner() {
             }}
           >
             <div style={{ fontSize: 11, fontWeight: 800, color: "#7F1D1D", marginBottom: 4 }}>Worst time for</div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{formatDayRangeAsDates(day1, ranges.worstTalk)}</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{bestWorstRanges(bleedOverride, cycleLength).worstDays}</div>
             <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Heavy talks, pushing for answers, rows.</div>
           </div>
         </div>
@@ -899,7 +904,7 @@ function NavigateInner() {
             }}
           >
             <div style={{ fontSize: 11, fontWeight: 800, color: "#7A4B00", marginBottom: 4 }}>Best for libido</div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{formatDayRangeAsDates(day1, ranges.bestLibido)}</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{bestWorstRanges(bleedOverride, cycleLength).bestLibidoDays}</div>
             <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>She's up for it. You'll know.</div>
           </div>
           <div
@@ -911,7 +916,7 @@ function NavigateInner() {
             }}
           >
             <div style={{ fontSize: 11, fontWeight: 800, color: "#7F1D1D", marginBottom: 4 }}>Worst for libido</div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{formatMultipleRanges(day1, ranges.worstLibido)}</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{bestWorstRanges(bleedOverride, cycleLength).worstLibidoDays}</div>
             <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Not in the mood. Don't push it.</div>
           </div>
           <div
@@ -923,13 +928,13 @@ function NavigateInner() {
             }}
           >
             <div style={{ fontSize: 11, fontWeight: 800, color: "#0B4A84", marginBottom: 4 }}>Best for pregnancy</div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{formatDayRangeAsDates(day1, ranges.bestPregnancy)}</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{bestWorstRanges(bleedOverride, cycleLength).bestPregnancyDays}</div>
             <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Fertile window. Highest odds.</div>
           </div>
         </div>
         <div style={{ marginTop: 10, padding: 12, borderRadius: 12, background: "#F1FFF5", border: "1px solid #16A34A" }}>
           <div style={{ fontSize: 11, fontWeight: 800, color: "#0B6B45", marginBottom: 4 }}>Best time for the hard chat</div>
-          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{formatDayRangeAsDates(day1, ranges.bestTalk)} (Follicular phase)</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{bestWorstRanges(bleedOverride, cycleLength).bestDays} (Follicular phase)</div>
         </div>
         {cycleHistory.length > 0 && (
           <div style={{ marginTop: 10, fontSize: 11, color: "var(--text-secondary)" }}>
@@ -1113,3 +1118,4 @@ export default function Page() {
     </Suspense>
   );
 }
+
