@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import React, { Suspense, useMemo, useRef, useState } from "react";
-import { ThemeToggle } from "../ThemeToggle";
 import { useRouter, useSearchParams } from "next/navigation";
 
 type Phase = "Menstrual" | "Follicular" | "Ovulatory" | "Luteal" | "PMS";
@@ -44,6 +43,23 @@ function fmt(d: Date) {
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const yyyy = d.getFullYear();
   return `${dd} ${mm} ${yyyy}`;
+}
+
+const dfShort = new Intl.DateTimeFormat("en-GB", { day: "numeric", month: "short" });
+function fmtShort(d: Date) {
+  return dfShort.format(d);
+}
+
+type DayRange = { startDay: number; endDay: number };
+
+function formatDayRangeAsDates(day1: Date, r: DayRange): string {
+  const start = addDays(day1, r.startDay - 1);
+  const end = addDays(day1, r.endDay - 1);
+  return `${fmtShort(start)} – ${fmtShort(end)}`;
+}
+
+function formatMultipleRanges(day1: Date, ranges: DayRange[]): string {
+  return ranges.map((r) => formatDayRangeAsDates(day1, r)).join(", ");
 }
 
 function startOfDay(d: Date) {
@@ -108,13 +124,13 @@ function ovulationMeta(dayIndex: number, cycleLengthOverride?: number) {
 
 function fertilityLine(dayIndex: number, cycleLengthOverride?: number) {
   const { isPeak, inWindow } = ovulationMeta(dayIndex, cycleLengthOverride);
-  if (isPeak) return "Highest odds today (best day in the cycle).";
-  if (inWindow) return "High odds today (fertile window).";
-  return "Lower odds today (relative to fertile window).";
+  if (isPeak) return "Best day for it.";
+  if (inWindow) return "High odds. Fertile window.";
+  return "Lower odds.";
 }
 
-// Best / worst day ranges for this cycle (depends on bleed and cycle length)
-function bestWorstRanges(bleedOverride: number, cycleLengthOverride?: number) {
+// Best / worst day ranges for this cycle (numeric ranges for date formatting)
+function bestWorstRangesRaw(bleedOverride: number, cycleLengthOverride?: number) {
   const bleed = bleedOverride ?? DEFAULTS.bleedDays;
   const cycleLength = cycleLengthOverride ?? DEFAULTS.cycleLength;
   const ovCenter = Math.round(cycleLength / 2);
@@ -125,15 +141,16 @@ function bestWorstRanges(bleedOverride: number, cycleLengthOverride?: number) {
   const fertileStart = ovCenter - 2;
   const fertileEnd = ovCenter + 1;
   const bestStart = bleed + 1;
-  const bestEnd = ovEnd;
-  const worstStart = pmsStart;
   const worstEnd = cycleLength;
   return {
-    bestDays: `Day ${bestStart}-${bestEnd}`,
-    worstDays: `Day ${worstStart}-${worstEnd}`,
-    bestLibidoDays: `Day ${ovStart}-${ovEnd}`,
-    worstLibidoDays: `Day 1-${bleed}, ${pmsStart}-${worstEnd}`,
-    bestPregnancyDays: `Day ${fertileStart}-${fertileEnd}`,
+    bestTalk: { startDay: bestStart, endDay: ovEnd },
+    worstTalk: { startDay: pmsStart, endDay: worstEnd },
+    bestLibido: { startDay: ovStart, endDay: ovEnd },
+    worstLibido: [
+      { startDay: 1, endDay: bleed },
+      { startDay: pmsStart, endDay: worstEnd },
+    ],
+    bestPregnancy: { startDay: fertileStart, endDay: fertileEnd },
   };
 }
 
@@ -177,7 +194,7 @@ function copyFor(phase: Phase, dayIndex: number) {
         2
       ),
       communication: pickUnique(
-        ["Say it, then stop. Don’t turn it into a discussion.", "Clear and simple. No essays.", "Be direct. Don’t overtalk."],
+        ["Say your bit, then leave it. Don’t turn it into a thing.", "Keep it short. No essays.", "Direct. Don’t waffle."],
         dayIndex,
         3
       ),
@@ -197,22 +214,22 @@ function copyFor(phase: Phase, dayIndex: number) {
   if (phase === "Ovulatory") {
     return {
       mood: pickUnique(
-        ["She's more open today.", "She's more up for stuff.", "She responds better today."],
+        ["More open today.", "Up for stuff.", "Responds better."],
         dayIndex,
         0
       ),
       libido: pickUnique(
-        ["Interest is up today.", "Signals are clearer.", "Attraction is more obvious."],
+        ["Up for it today.", "Signals are clear.", "Obvious."],
         dayIndex,
         1
       ),
       stress: pickUnique(
-        ["Harder to annoy her today.", "Less friction.", "She's less defensive."],
+        ["Harder to piss her off today.", "Less friction.", "Less defensive."],
         dayIndex,
         2
       ),
       communication: pickUnique(
-        ["Say it, then stop. Don’t turn it into a debate.", "How you say it matters. Keep it confident.", "Don’t overtalk."],
+        ["Say it, then drop it. Don’t turn it into a debate.", "How you say it matters. Keep it confident.", "Don’t waffle."],
         dayIndex,
         3
       ),
@@ -222,7 +239,7 @@ function copyFor(phase: Phase, dayIndex: number) {
         4
       ),
       avoid: pickUnique(
-        ["Don't make it a big thing.", "Don't try too hard.", "Don't push."],
+        ["Don't overthink it.", "Don't try too hard.", "Don't push."],
         dayIndex,
         5
       ),
@@ -237,7 +254,7 @@ function copyFor(phase: Phase, dayIndex: number) {
         0
       ),
       libido: pickUnique(
-        ["Interest is low today.", "Not a sex day.", "Leave it alone today."],
+        ["Not in the mood today.", "Forget it today.", "Leave it."],
         dayIndex,
         1
       ),
@@ -247,17 +264,17 @@ function copyFor(phase: Phase, dayIndex: number) {
         2
       ),
       communication: pickUnique(
-        ["Talk less. Or you'll get an argument.", "Keep it short. Stick to facts.", "Not the day for long talks."],
+        ["Talk less or you'll get a row.", "Short. Facts only.", "Not the day for lectures."],
         dayIndex,
         3
       ),
       play: pickUnique(
-        ["Handle the essentials. Skip the rest.", "Do the basics. Don’t add more.", "Keep it simple. Don't add stress."],
+        ["Essentials only. Skip the rest.", "Basics. Don’t add more.", "Keep it simple."],
         dayIndex,
         4
       ),
       avoid: pickUnique(
-        ["Don't start big talks.", "Don't push for decisions.", "Don't bring up stuff you can’t fix today."],
+        ["Don't start the big talk.", "Don't push for a decision.", "Don't bring up what you can’t fix today."],
         dayIndex,
         5
       ),
@@ -277,12 +294,12 @@ function copyFor(phase: Phase, dayIndex: number) {
         1
       ),
       stress: pickUnique(
-        ["She can't handle chaos today.", "She gets irritated faster.", "If you push, you get friction."],
+        ["Can't handle chaos today.", "Irritated easy.", "Push and you get friction."],
         dayIndex,
         2
       ),
       communication: pickUnique(
-        ["Say it once. Say it clear. Don’t turn it into a discussion.", "Be clear. Be specific. No vague stuff.", "Short and clear. Don’t reopen it."],
+        ["Say it once, clear. Don’t turn it into a thing.", "Clear. Specific. No vague stuff.", "Short. Don’t reopen it."],
         dayIndex,
         3
       ),
@@ -302,7 +319,7 @@ function copyFor(phase: Phase, dayIndex: number) {
   // PMS
   return {
     mood: pickUnique(
-      ["No room for error.", "She reacts sharp.", "She's sensitive to how you say things."],
+      ["No room for error.", "Reacts sharp.", "Sensitive to how you say it."],
       dayIndex,
       0
     ),
@@ -393,7 +410,7 @@ function RiskChip({ risk }: { risk: RiskLevel }) {
   );
 }
 
-function DayCard({ d }: { d: DayInfo }) {
+function DayCard({ d, hidePregnancy }: { d: DayInfo; hidePregnancy?: boolean }) {
   const phaseBg: Record<Phase, { bg: string; border: string }> = {
     Menstrual: { bg: "#FFF1F5", border: "#FF3B7B" },
     Follicular: { bg: "#F1FFF5", border: "#16A34A" },
@@ -428,7 +445,7 @@ function DayCard({ d }: { d: DayInfo }) {
         <div style={{ fontWeight: 1000 as any, fontSize: 18 }}>
           {fmt(d.date)} <span style={{ color: "var(--text-secondary)", fontSize: 13 }}>· Day {d.dayIndex}</span>
         </div>
-        <div style={{ color: "var(--text-secondary)", fontSize: 12 }}>Swipe ◀ ▶</div>
+        <div style={{ color: "var(--text-secondary)", fontSize: 12 }}>Swipe or use buttons</div>
       </div>
 
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 12 }}>
@@ -441,13 +458,13 @@ function DayCard({ d }: { d: DayInfo }) {
         {row(libidoEmojiForPhase(d.phase), "Libido", d.libido)}
         {row(stressEmojiForPhase(d.phase), "Stress", d.stress)}
         {row("💬", "Communication", d.communication)}
-        {row("🎯", "Today strategy", d.play)}
+        {row("🎯", "Today", d.play)}
         {row("🚫", "Avoid", d.avoid)}
-        {row("🤰", "Pregnancy odds", d.fertility)}
+        {!hidePregnancy && row("🤰", "Pregnancy odds", d.fertility)}
       </div>
 
       <div style={{ marginTop: 14, fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.35 }}>
-        <strong><Link href="/disclaimer" style={{ color: "inherit", textDecoration: "underline" }}>Disclaimer</Link>:</strong> For informational use only. Not for contraception or medical decisions. Pattern-based. Individual responses differ. Not medical advice. Consult a healthcare provider for health decisions.
+        <strong><Link href="/disclaimer" style={{ color: "inherit", textDecoration: "underline" }}>Disclaimer</Link>:</strong> Info only. Not for contraception or medical decisions. Not medical advice.
       </div>
     </section>
   );
@@ -463,39 +480,52 @@ function NavigateInner() {
   const cycleLength = Number(sp.get("cl") || DEFAULTS.cycleLength);
 
   const [dismissBleedPrompt, setDismissBleedPrompt] = useState(false);
-  const [lastNewPeriodNotYetDate, setLastNewPeriodNotYetDate] = useState<string | null>(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [showNewCycleConfirm, setShowNewCycleConfirm] = useState(false);
+  const [hidePregnancy, setHidePregnancy] = useState(false);
+
+  React.useEffect(() => {
+    try {
+      if (typeof window !== "undefined") {
+        const v = window.localStorage.getItem("cf_hide_pregnancy");
+        setHidePregnancy(v === "1");
+      }
+    } catch {}
+  }, []);
+
+  function toggleHidePregnancy() {
+    const next = !hidePregnancy;
+    setHidePregnancy(next);
+    try {
+      if (typeof window !== "undefined") window.localStorage.setItem("cf_hide_pregnancy", next ? "1" : "0");
+    } catch {}
+    setMenuOpen(false);
+  }
 
   const day1 = useMemo(() => new Date(day1Str + "T12:00:00"), [day1Str]);
-  const today = useMemo(() => new Date(), []);
+  const today = new Date();
 
-  // When cycle (day1) changes, reset view and bleed prompt; do NOT clear "Not yet" date
+  // When cycle (day1) changes, reset view and bleed prompt
   React.useEffect(() => {
     setDelta(0);
     setDismissBleedPrompt(false);
   }, [day1Str]);
 
-  // Per-cycle "Not yet" date: read from key for this cycle only; new cycle = new key = prompt shows again
-  const newPeriodNotYetKey = `cf_new_period_notyet_${day1Str}`;
-  React.useEffect(() => {
-    try {
-      const stored = typeof window !== "undefined" ? window.localStorage.getItem(newPeriodNotYetKey) : null;
-      setLastNewPeriodNotYetDate(stored || null);
-    } catch {}
-  }, [day1Str, newPeriodNotYetKey]);
-
   const baseOffset = useMemo(() => {
     const a = startOfDay(today).getTime();
     const b = startOfDay(day1).getTime();
+    if (Number.isNaN(a) || Number.isNaN(b)) return 0;
     return Math.max(0, Math.floor((a - b) / 86400000));
   }, [today, day1]);
 
   // Swipeable delta (0 = today)
   const [delta, setDelta] = useState(0);
-  const viewOffset = baseOffset + delta;
+  const viewOffset = (Number.isNaN(baseOffset) ? 0 : baseOffset) + delta;
 
   const build = (o: number): DayInfo => {
-    const date = addDays(day1, o);
-    const dayIndex = o + 1;
+    const safeO = Number.isNaN(o) || o < 0 ? 0 : o;
+    const date = addDays(day1, safeO);
+    const dayIndex = safeO + 1;
     const phase = phaseForDay(dayIndex, bleedOverride, cycleLength);
     const risk = riskFor(phase);
     const c = copyFor(phase, dayIndex);
@@ -505,14 +535,17 @@ function NavigateInner() {
 
   const current = useMemo(() => build(viewOffset), [viewOffset, bleedOverride, cycleLength]);
 
+  const ranges = useMemo(
+    () => bestWorstRangesRaw(bleedOverride, cycleLength),
+    [bleedOverride, cycleLength]
+  );
+
   // Ask "period over?" on first day after current assumed bleed (Day 6 if default 5, then 7, 8...)
   const showBleedQuestion = !dismissBleedPrompt && current.dayIndex === bleedOverride + 1;
-  // "New period started?" only when viewing TODAY (delta === 0); "Not yet" hides for this calendar day only, reappears next day
-  const todayDateStr = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, "0")}-${String(new Date().getDate()).padStart(2, "0")}`;
+  // "New cycle started?" from Day 26; no dismiss state – prompt reappears every day until they tap yes
   const showNewPeriodQuestion =
-    delta === 0 &&
-    current.dayIndex >= cycleLength &&
-    (lastNewPeriodNotYetDate === null || lastNewPeriodNotYetDate !== todayDateStr);
+    Number.isFinite(current.dayIndex) && current.dayIndex >= 26;
+  const isOverdueBanner = current.dayIndex >= 35;
 
   const qpBase = `age=${encodeURIComponent(age)}&day1=${encodeURIComponent(day1Str)}&cl=${encodeURIComponent(String(cycleLength))}`;
 
@@ -526,9 +559,9 @@ function NavigateInner() {
     router.refresh();
   }
 
-  const [newCycleConfirmation, setNewCycleConfirmation] = useState(false);
-
   function startNewCycle() {
+    setShowNewCycleConfirm(false);
+    setMenuOpen(false);
     const d = new Date();
     const newDay1Str = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     const learnedCl = current.dayIndex;
@@ -541,10 +574,6 @@ function NavigateInner() {
         setCycleHistory(next);
       }
     } catch (_) {}
-    setDelta(0);
-    setDismissBleedPrompt(false);
-    setNewCycleConfirmation(true);
-    setTimeout(() => setNewCycleConfirmation(false), 4000);
     router.replace(
       `/navigate?age=${encodeURIComponent(age)}&day1=${encodeURIComponent(newDay1Str)}&bd=5&cl=${learnedCl}`
     );
@@ -560,6 +589,14 @@ function NavigateInner() {
       setCycleHistory([]);
     }
   }, []);
+
+  const newCyclePreviewLength = current.dayIndex;
+  const combinedHistory = [...cycleHistory, newCyclePreviewLength].slice(-5);
+  const newCyclePreviewAvg =
+    combinedHistory.length > 0
+      ? Math.round(combinedHistory.reduce((a, b) => a + b, 0) / combinedHistory.length)
+      : newCyclePreviewLength;
+
   // --- Swipe handling (no libs) ---
   const drag = useRef({
     active: false,
@@ -649,32 +686,189 @@ function NavigateInner() {
           )}
         </div>
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          <ThemeToggle />
           <Link href="/" style={{ fontSize: 13, textDecoration: "none", fontWeight: 900 }}>
             🏠 Home
           </Link>
           <Link href="/about" style={{ fontSize: 13, textDecoration: "none", fontWeight: 900 }}>
             About
           </Link>
+          <div style={{ position: "relative" }}>
+            <button
+              type="button"
+              onClick={() => setMenuOpen((o) => !o)}
+              aria-label="Menu"
+              style={{
+                padding: "6px 8px",
+                border: "1px solid var(--input-border)",
+                borderRadius: 8,
+                background: "var(--input-bg)",
+                color: "var(--foreground)",
+                cursor: "pointer",
+                fontSize: 18,
+                lineHeight: 1,
+              }}
+            >
+              ⋮
+            </button>
+            {menuOpen && (
+              <>
+                <div
+                  style={{ position: "fixed", inset: 0, zIndex: 10 }}
+                  onClick={() => setMenuOpen(false)}
+                  aria-hidden="true"
+                />
+                <div
+                  style={{
+                    position: "absolute",
+                    right: 0,
+                    top: "100%",
+                    marginTop: 4,
+                    zIndex: 20,
+                    minWidth: 200,
+                    padding: "8px 0",
+                    background: "var(--background)",
+                    border: "1px solid var(--input-border)",
+                    borderRadius: 12,
+                    boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                  }}
+                >
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowNewCycleConfirm(true);
+                      setMenuOpen(false);
+                    }}
+                    style={{
+                      display: "block",
+                      width: "100%",
+                      padding: "10px 14px",
+                      textAlign: "left",
+                      border: "none",
+                      background: "transparent",
+                      color: "var(--foreground)",
+                      fontSize: 14,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    Start New Cycle Now
+                  </button>
+                  <Link
+                    href={`/?day1=${encodeURIComponent(day1Str)}&age=${encodeURIComponent(age)}`}
+                    style={{
+                      display: "block",
+                      padding: "10px 14px",
+                      textAlign: "left",
+                      color: "var(--foreground)",
+                      fontSize: 14,
+                      fontWeight: 600,
+                      textDecoration: "none",
+                    }}
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    Edit Last Period Date
+                  </Link>
+                  <button
+                    type="button"
+                    onClick={toggleHidePregnancy}
+                    style={{
+                      display: "block",
+                      width: "100%",
+                      padding: "10px 14px",
+                      textAlign: "left",
+                      border: "none",
+                      background: "transparent",
+                      color: "var(--foreground)",
+                      fontSize: 14,
+                      fontWeight: 600,
+                      cursor: "pointer",
+                    }}
+                  >
+                    {hidePregnancy ? "Show Pregnancy Section" : "Hide Pregnancy Section"}
+                  </button>
+                  <Link
+                    href="/about"
+                    style={{
+                      display: "block",
+                      padding: "10px 14px",
+                      color: "var(--foreground)",
+                      fontSize: 14,
+                      fontWeight: 600,
+                      textDecoration: "none",
+                    }}
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    About
+                  </Link>
+                  <Link
+                    href="/disclaimer"
+                    style={{
+                      display: "block",
+                      padding: "10px 14px",
+                      color: "var(--foreground)",
+                      fontSize: 14,
+                      fontWeight: 600,
+                      textDecoration: "none",
+                    }}
+                    onClick={() => setMenuOpen(false)}
+                  >
+                    Disclaimer
+                  </Link>
+                </div>
+              </>
+            )}
+          </div>
         </div>
       </div>
 
-      {newCycleConfirmation && (
-        <div
-          role="alert"
+      {showNewCycleConfirm && (
+        <section
           style={{
             marginTop: 12,
-            padding: "10px 14px",
-            borderRadius: 12,
-            background: "var(--button-primary)",
-            color: "var(--button-primary-color)",
-            fontSize: 14,
-            fontWeight: 700,
-            textAlign: "center",
+            borderRadius: 16,
+            padding: 14,
+            border: "1px solid var(--button-primary)",
+            background: "#F1FFF5",
+            boxShadow: "0 1px 0 rgba(0,0,0,0.05)",
           }}
         >
-          New cycle started — you&apos;re on Day 1
-        </div>
+          <div style={{ fontWeight: 1000 as any, color: "var(--foreground)", marginBottom: 6 }}>
+            Confirm new cycle
+          </div>
+          <div style={{ fontSize: 13, color: "var(--text-secondary)", marginBottom: 12 }}>
+            This cycle was {current.dayIndex} days. New average: {newCyclePreviewAvg} days.
+          </div>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            <button
+              onClick={startNewCycle}
+              style={{
+                border: "1px solid var(--button-primary)",
+                background: "var(--button-primary)",
+                color: "var(--button-primary-color)",
+                padding: "10px 12px",
+                borderRadius: 12,
+                fontWeight: 1000 as any,
+                cursor: "pointer",
+              }}
+            >
+              Confirm
+            </button>
+            <button
+              onClick={() => setShowNewCycleConfirm(false)}
+              style={{
+                border: "1px solid var(--input-border)",
+                background: "var(--background)",
+                color: "var(--foreground)",
+                padding: "10px 12px",
+                borderRadius: 12,
+                fontWeight: 1000 as any,
+                cursor: "pointer",
+              }}
+            >
+              Cancel
+            </button>
+          </div>
+        </section>
       )}
 
       {/* Best day / Worst day for this cycle */}
@@ -694,9 +888,9 @@ function NavigateInner() {
               border: "1px solid #16A34A",
             }}
           >
-            <div style={{ fontSize: 11, fontWeight: 800, color: "#0B6B45", marginBottom: 4 }}>Best day for conversations</div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{bestWorstRanges(bleedOverride, cycleLength).bestDays}</div>
-            <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Conversations, planning, hanging out.</div>
+            <div style={{ fontSize: 11, fontWeight: 800, color: "#0B6B45", marginBottom: 4 }}>Best time to talk</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{formatDayRangeAsDates(day1, ranges.bestTalk)}</div>
+            <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Talk, plan, chill.</div>
           </div>
           <div
             style={{
@@ -706,9 +900,9 @@ function NavigateInner() {
               border: "1px solid #EF4444",
             }}
           >
-            <div style={{ fontSize: 11, fontWeight: 800, color: "#7F1D1D", marginBottom: 4 }}>Worst day for</div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{bestWorstRanges(bleedOverride, cycleLength).worstDays}</div>
-            <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Big talks, pushing decisions, arguments.</div>
+            <div style={{ fontSize: 11, fontWeight: 800, color: "#7F1D1D", marginBottom: 4 }}>Worst time for</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{formatDayRangeAsDates(day1, ranges.worstTalk)}</div>
+            <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Heavy talks, pushing for answers, rows.</div>
           </div>
         </div>
         <div
@@ -727,9 +921,9 @@ function NavigateInner() {
               border: "1px solid #F59E0B",
             }}
           >
-            <div style={{ fontSize: 11, fontWeight: 800, color: "#7A4B00", marginBottom: 4 }}>Best day for libido</div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{bestWorstRanges(bleedOverride, cycleLength).bestLibidoDays}</div>
-            <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Interest highest. Signals clearer.</div>
+            <div style={{ fontSize: 11, fontWeight: 800, color: "#7A4B00", marginBottom: 4 }}>Best for libido</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{formatDayRangeAsDates(day1, ranges.bestLibido)}</div>
+            <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>She's up for it. You'll know.</div>
           </div>
           <div
             style={{
@@ -739,9 +933,9 @@ function NavigateInner() {
               border: "1px solid #EF4444",
             }}
           >
-            <div style={{ fontSize: 11, fontWeight: 800, color: "#7F1D1D", marginBottom: 4 }}>Worst day for libido</div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{bestWorstRanges(bleedOverride, cycleLength).worstLibidoDays}</div>
-            <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Low interest. Leave it alone.</div>
+            <div style={{ fontSize: 11, fontWeight: 800, color: "#7F1D1D", marginBottom: 4 }}>Worst for libido</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{formatMultipleRanges(day1, ranges.worstLibido)}</div>
+            <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Not in the mood. Don't push it.</div>
           </div>
           <div
             style={{
@@ -751,14 +945,14 @@ function NavigateInner() {
               border: "1px solid #2563EB",
             }}
           >
-            <div style={{ fontSize: 11, fontWeight: 800, color: "#0B4A84", marginBottom: 4 }}>Best day for pregnancy</div>
-            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{bestWorstRanges(bleedOverride, cycleLength).bestPregnancyDays}</div>
+            <div style={{ fontSize: 11, fontWeight: 800, color: "#0B4A84", marginBottom: 4 }}>Best for pregnancy</div>
+            <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{formatDayRangeAsDates(day1, ranges.bestPregnancy)}</div>
             <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Fertile window. Highest odds.</div>
           </div>
         </div>
         <div style={{ marginTop: 10, padding: 12, borderRadius: 12, background: "#F1FFF5", border: "1px solid #16A34A" }}>
-          <div style={{ fontSize: 11, fontWeight: 800, color: "#0B6B45", marginBottom: 4 }}>Best day to have a difficult conversation</div>
-          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{bestWorstRanges(bleedOverride, cycleLength).bestDays} (Follicular phase)</div>
+          <div style={{ fontSize: 11, fontWeight: 800, color: "#0B6B45", marginBottom: 4 }}>Best time for the hard chat</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{formatDayRangeAsDates(day1, ranges.bestTalk)} (Follicular phase)</div>
         </div>
         {cycleHistory.length > 0 && (
           <div style={{ marginTop: 10, fontSize: 11, color: "var(--text-secondary)" }}>
@@ -778,9 +972,9 @@ function NavigateInner() {
             boxShadow: "0 1px 0 rgba(0,0,0,0.05)",
           }}
         >
-          <div style={{ fontWeight: 1000 as any, color: "var(--foreground)" }}>Day {current.dayIndex}: period over yet?</div>
+          <div style={{ fontWeight: 1000 as any, color: "var(--foreground)" }}>Day {current.dayIndex}: still on?</div>
           <div style={{ marginTop: 6, fontSize: 13, color: "var(--text-secondary)" }}>
-            Can be 5–7 days. Some longer. We need to know so the app gets the phase right.
+            Usually 5–7 days. Tell us when it's over so the phases line up.
           </div>
 
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
@@ -796,7 +990,7 @@ function NavigateInner() {
                 cursor: "pointer",
               }}
             >
-              No, still going
+              Still going
             </button>
 
             <button
@@ -811,13 +1005,13 @@ function NavigateInner() {
                 cursor: "pointer",
               }}
             >
-              Yes, over
+              Over
             </button>
           </div>
 
           {current.dayIndex > 2 && (
             <div style={{ marginTop: 12, fontSize: 12, color: "var(--text-secondary)" }}>
-              She said it ended earlier — on day{" "}
+              Ended earlier — day{" "}
               <select
                 value={bleedOverride}
                 onChange={(e) => setBleedToDay(Number(e.target.value))}
@@ -840,7 +1034,7 @@ function NavigateInner() {
         </section>
       )}
 
-      {showNewPeriodQuestion && (
+      {showNewPeriodQuestion && !showNewCycleConfirm && (
         <section
           style={{
             marginTop: 12,
@@ -851,13 +1045,15 @@ function NavigateInner() {
             boxShadow: "0 1px 0 rgba(0,0,0,0.05)",
           }}
         >
-          <div style={{ fontWeight: 1000 as any, color: "var(--foreground)" }}>Day {current.dayIndex}: new period started?</div>
+          <div style={{ fontWeight: 1000 as any, color: "var(--foreground)" }}>
+            {isOverdueBanner ? "Cycle overdue – ready to start a new one?" : "New cycle started?"}
+          </div>
           <div style={{ marginTop: 6, fontSize: 13, color: "var(--text-secondary)" }}>
-            Start a new cycle so the app resets and we don&apos;t keep showing PMS. We&apos;ll use this cycle length ({current.dayIndex} days) for the next one.
+            Tap to start fresh. We&apos;ll use this length ({current.dayIndex} days) for the next cycle.
           </div>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
             <button
-              onClick={startNewCycle}
+              onClick={() => setShowNewCycleConfirm(true)}
               style={{
                 border: "1px solid var(--button-primary)",
                 background: "var(--button-primary)",
@@ -868,27 +1064,11 @@ function NavigateInner() {
                 cursor: "pointer",
               }}
             >
-              Yes, new cycle
+              Yeah, new cycle
             </button>
-            <button
-              onClick={() => {
-                setLastNewPeriodNotYetDate(todayDateStr);
-                try {
-                  if (typeof window !== "undefined") window.localStorage.setItem(newPeriodNotYetKey, todayDateStr);
-                } catch {}
-              }}
-              style={{
-                border: "1px solid var(--input-border)",
-                background: "var(--background)",
-                color: "var(--foreground)",
-                padding: "10px 12px",
-                borderRadius: 12,
-                fontWeight: 1000 as any,
-                cursor: "pointer",
-              }}
-            >
-              Not yet
-            </button>
+          </div>
+          <div style={{ marginTop: 8, fontSize: 12, color: "var(--text-secondary)" }}>
+            If not yet, swipe to another day.
           </div>
         </section>
       )}
@@ -909,7 +1089,7 @@ function NavigateInner() {
             transition: drag.current.active ? "none" : "transform 160ms ease-out",
           }}
         >
-          <DayCard d={current} />
+          <DayCard d={current} hidePregnancy={hidePregnancy} />
         </div>
 
         <div style={{ display: "flex", justifyContent: "space-between", gap: 10, marginTop: 10 }}>
