@@ -27,7 +27,7 @@ function HomePageContent() {
   const [day1, setDay1] = useState("");
   const [showPeriodStillOn, setShowPeriodStillOn] = useState(false);
   const [showPeriodEndQuestion, setShowPeriodEndQuestion] = useState(false);
-  const [periodEndDay, setPeriodEndDay] = useState(DEFAULT_BLEED_DAYS);
+  const [periodEndDate, setPeriodEndDate] = useState("");
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(1);
   const [onboardingDay1, setOnboardingDay1] = useState("");
@@ -43,6 +43,7 @@ function HomePageContent() {
   useEffect(() => {
     setShowPeriodStillOn(false);
     setShowPeriodEndQuestion(false);
+    setPeriodEndDate("");
   }, [day1]);
 
   useEffect(() => {
@@ -73,6 +74,15 @@ function HomePageContent() {
   };
 
   const todayDayIndex = (): number => daysAgo() + 1;
+  const todayDateStr = formatDateInput(new Date());
+
+  const dayIndexForDate = (dateStr: string): number => {
+    if (!dateStr || !day1) return NaN;
+    const day1Start = startOfDay(new Date(day1 + "T00:00:00"));
+    const selectedStart = startOfDay(new Date(dateStr + "T00:00:00"));
+    if (Number.isNaN(day1Start.getTime()) || Number.isNaN(selectedStart.getTime())) return NaN;
+    return Math.floor((selectedStart.getTime() - day1Start.getTime()) / 86400000) + 1;
+  };
 
   function go() {
     if (!day1) return;
@@ -114,14 +124,19 @@ function HomePageContent() {
 
   function confirmPeriodOver() {
     setShowPeriodStillOn(false);
-    const maxSelectable = Math.max(1, Math.min(7, daysAgo()));
-    setPeriodEndDay(Math.min(DEFAULT_BLEED_DAYS, maxSelectable));
+    const day1Start = new Date(day1 + "T00:00:00");
+    const suggestedEnd = new Date(day1Start);
+    suggestedEnd.setDate(suggestedEnd.getDate() + DEFAULT_BLEED_DAYS - 1);
+    const today = startOfDay(new Date());
+    const clamped = suggestedEnd.getTime() > today.getTime() ? today : suggestedEnd;
+    setPeriodEndDate(formatDateInput(clamped));
     setShowPeriodEndQuestion(true);
   }
 
   function confirmPeriodEndDay() {
-    const maxSelectable = Math.max(1, Math.min(7, daysAgo()));
-    const safeDay = Math.min(Math.max(1, periodEndDay), maxSelectable);
+    const maxSelectable = Math.max(1, daysAgo() + 1);
+    const computed = dayIndexForDate(periodEndDate);
+    const safeDay = Number.isFinite(computed) ? Math.min(Math.max(1, computed), maxSelectable) : DEFAULT_BLEED_DAYS;
     setShowPeriodEndQuestion(false);
     navigate(DEFAULT_CYCLE_LENGTH, safeDay);
   }
@@ -402,13 +417,16 @@ function HomePageContent() {
             When did her period end?
           </div>
           <p style={{ fontSize: "0.8125rem", color: "var(--text-secondary)", marginBottom: "0.75rem", lineHeight: 1.4 }}>
-            Pick the last day she was bleeding (Day 1 = first day of her period). The next day is Day 1 of the new phase.
+            Pick the last day she was bleeding. The next day is Day 1 of the new phase.
           </p>
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: "0.75rem" }}>
-            <label style={{ fontSize: "0.875rem", fontWeight: 600 }}>Last bleeding day</label>
-            <select
-              value={periodEndDay}
-              onChange={(e) => setPeriodEndDay(Number(e.target.value))}
+            <label style={{ fontSize: "0.875rem", fontWeight: 600 }}>Last bleeding date</label>
+            <input
+              type="date"
+              value={periodEndDate}
+              min={day1 || undefined}
+              max={todayDateStr}
+              onChange={(e) => setPeriodEndDate(e.target.value)}
               style={{
                 padding: "0.5rem 0.75rem",
                 fontSize: "1rem",
@@ -419,13 +437,7 @@ function HomePageContent() {
                 fontWeight: 600,
                 cursor: "pointer",
               }}
-            >
-              {Array.from({ length: Math.min(7, daysAgo()) }, (_, i) => i + 1).map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
-              ))}
-            </select>
+            />
           </div>
           <button
             type="button"
