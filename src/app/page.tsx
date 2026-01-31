@@ -402,10 +402,10 @@ function HomePageContent() {
             When did her period end?
           </div>
           <p style={{ fontSize: "0.8125rem", color: "var(--text-secondary)", marginBottom: "0.75rem", lineHeight: 1.4 }}>
-            Pick the day of her cycle it ended (Day 1 = first day of period).
+            Pick the last day she was bleeding (Day 1 = first day of her period). The next day is Day 1 of the new phase.
           </p>
           <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: "0.75rem" }}>
-            <label style={{ fontSize: "0.875rem", fontWeight: 600 }}>Ended on day</label>
+            <label style={{ fontSize: "0.875rem", fontWeight: 600 }}>Last bleeding day</label>
             <select
               value={periodEndDay}
               onChange={(e) => setPeriodEndDay(Number(e.target.value))}

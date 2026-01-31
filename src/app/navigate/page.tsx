@@ -1007,7 +1007,7 @@ function NavigateInner() {
 
           {current.dayIndex > 2 && (
             <div style={{ marginTop: 12, fontSize: 12, color: "var(--text-secondary)" }}>
-              Ended earlier — day{" "}
+              Ended earlier — last bleeding day (next day is Day 1){" "}
               <select
                 value={bleedOverride}
                 onChange={(e) => setBleedToDay(Number(e.target.value))}
