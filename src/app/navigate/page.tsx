@@ -24,6 +24,11 @@ type DayInfo = {
   fertility: string;
 };
 
+type DayRange = {
+  start: number;
+  end: number;
+};
+
 const DEFAULTS = {
   cycleLength: 28,
   bleedDays: 5, // check from Day 6 (5-day period possible)
@@ -43,6 +48,18 @@ function fmt(d: Date) {
   const mm = String(d.getMonth() + 1).padStart(2, "0");
   const yyyy = d.getFullYear();
   return `${dd} ${mm} ${yyyy}`;
+}
+
+function formatDayRangeAsDates(day1: Date, range: DayRange) {
+  const start = Math.min(range.start, range.end);
+  const end = Math.max(range.start, range.end);
+  if (!Number.isFinite(start) || !Number.isFinite(end) || Number.isNaN(day1.getTime())) {
+    return `Day ${range.start}-${range.end}`;
+  }
+  const startDate = addDays(day1, start - 1);
+  const endDate = addDays(day1, end - 1);
+  if (start === end) return fmt(startDate);
+  return `${fmt(startDate)} - ${fmt(endDate)}`;
 }
 
 function startOfDay(d: Date) {
@@ -128,6 +145,7 @@ function bestWorstRanges(bleedOverride: number, cycleLengthOverride?: number) {
   const worstStart = pmsStart;
   const worstEnd = cycleLength;
   return {
+    bestTalk: { start: bestStart, end: bestEnd },
     bestDays: `Day ${bestStart}-${bestEnd}`,
     worstDays: `Day ${worstStart}-${worstEnd}`,
     bestLibidoDays: `Day ${ovStart}-${ovEnd}`,
@@ -516,6 +534,7 @@ function NavigateInner() {
   };
 
   const current = useMemo(() => build(viewOffset), [viewOffset, bleedOverride, cycleLength]);
+  const ranges = useMemo(() => bestWorstRanges(bleedOverride, cycleLength), [bleedOverride, cycleLength]);
 
   // Ask "period over?" on first day after current assumed bleed (Day 6 if default 5, then 7, 8...)
   const showBleedQuestion = !dismissBleedPrompt && current.dayIndex === bleedOverride + 1;
