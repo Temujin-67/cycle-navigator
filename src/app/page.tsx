@@ -26,6 +26,8 @@ function HomePageContent() {
   const [age, setAge] = useState("");
   const [day1, setDay1] = useState("");
   const [showPeriodStillOn, setShowPeriodStillOn] = useState(false);
+  const [showPeriodEndQuestion, setShowPeriodEndQuestion] = useState(false);
+  const [periodEndDay, setPeriodEndDay] = useState(DEFAULT_BLEED_DAYS);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(1);
   const [onboardingDay1, setOnboardingDay1] = useState("");
@@ -37,6 +39,11 @@ function HomePageContent() {
     if (qDay1) setDay1(qDay1);
     if (qAge != null) setAge(qAge);
   }, [searchParams]);
+
+  useEffect(() => {
+    setShowPeriodStillOn(false);
+    setShowPeriodEndQuestion(false);
+  }, [day1]);
 
   useEffect(() => {
     try {
@@ -70,9 +77,12 @@ function HomePageContent() {
   function go() {
     if (!day1) return;
     if (day1InPast()) {
+      setShowPeriodEndQuestion(false);
       setShowPeriodStillOn(true);
       return;
     }
+    setShowPeriodStillOn(false);
+    setShowPeriodEndQuestion(false);
     navigate(DEFAULT_CYCLE_LENGTH, DEFAULT_BLEED_DAYS);
   }
 
@@ -98,12 +108,22 @@ function HomePageContent() {
   function confirmPeriodStillOn() {
     const bd = todayDayIndex();
     setShowPeriodStillOn(false);
+    setShowPeriodEndQuestion(false);
     navigate(DEFAULT_CYCLE_LENGTH, bd);
   }
 
   function confirmPeriodOver() {
     setShowPeriodStillOn(false);
-    navigate(DEFAULT_CYCLE_LENGTH, DEFAULT_BLEED_DAYS);
+    const maxSelectable = Math.max(1, Math.min(7, daysAgo()));
+    setPeriodEndDay(Math.min(DEFAULT_BLEED_DAYS, maxSelectable));
+    setShowPeriodEndQuestion(true);
+  }
+
+  function confirmPeriodEndDay() {
+    const maxSelectable = Math.max(1, Math.min(7, daysAgo()));
+    const safeDay = Math.min(Math.max(1, periodEndDay), maxSelectable);
+    setShowPeriodEndQuestion(false);
+    navigate(DEFAULT_CYCLE_LENGTH, safeDay);
   }
 
   return (
