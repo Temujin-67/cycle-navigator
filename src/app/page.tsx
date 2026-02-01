@@ -105,7 +105,13 @@ function HomePageContent() {
 
   function confirmPeriodOver() {
     setShowPeriodStillOn(false);
-    navigate(DEFAULT_CYCLE_LENGTH, DEFAULT_BLEED_DAYS);
+    setPeriodEndDay(Math.min(DEFAULT_BLEED_DAYS, Math.max(1, todayDayIndex())));
+    setShowPeriodEndQuestion(true);
+  }
+
+  function confirmPeriodEndDay() {
+    setShowPeriodEndQuestion(false);
+    navigate(DEFAULT_CYCLE_LENGTH, periodEndDay);
   }
 
   return (
@@ -367,6 +373,65 @@ function HomePageContent() {
               Over
             </button>
           </div>
+        </section>
+      )}
+
+      {showPeriodEndQuestion && (
+        <section
+          style={{
+            marginTop: "1.5rem",
+            padding: "1rem 1.25rem",
+            borderRadius: 12,
+            border: "1px solid var(--input-border)",
+            background: "var(--input-bg)",
+          }}
+        >
+          <div style={{ fontSize: "0.9375rem", fontWeight: 600, marginBottom: "0.5rem" }}>
+            When did her period end?
+          </div>
+          <p style={{ fontSize: "0.8125rem", color: "var(--text-secondary)", marginBottom: "0.75rem", lineHeight: 1.4 }}>
+            Pick the day of her cycle it ended (Day 1 = first day of period).
+          </p>
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: "0.75rem" }}>
+            <label style={{ fontSize: "0.875rem", fontWeight: 600 }}>Ended on day</label>
+            <select
+              value={periodEndDay}
+              onChange={(e) => setPeriodEndDay(Number(e.target.value))}
+              style={{
+                padding: "0.5rem 0.75rem",
+                fontSize: "1rem",
+                border: "1px solid var(--input-border)",
+                borderRadius: 10,
+                background: "var(--input-bg)",
+                color: "var(--foreground)",
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              {Array.from({ length: Math.max(1, Math.min(7, todayDayIndex())) }, (_, i) => i + 1).map((d) => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ))}
+            </select>
+          </div>
+          <button
+            type="button"
+            onClick={confirmPeriodEndDay}
+            style={{
+              width: "100%",
+              padding: "0.75rem 1rem",
+              fontSize: "1rem",
+              fontWeight: 600,
+              cursor: "pointer",
+              border: "none",
+              borderRadius: 10,
+              background: "var(--button-primary)",
+              color: "var(--button-primary-color)",
+            }}
+          >
+            Continue
+          </button>
         </section>
       )}
 
