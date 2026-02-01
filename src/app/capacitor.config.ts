@@ -10,7 +10,6 @@ const config: CapacitorConfig = {
   appId: "com.damsstudios.cycleforecast",
   appName: "Cycle Forecast",
   webDir: "out",
-  bundledWebRuntime: false,
 };
 
 export default config;
