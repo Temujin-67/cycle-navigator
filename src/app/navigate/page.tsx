@@ -1,6 +1,7 @@
 // CHANGED LINES:
-// - formatHumanDate(): removed year (now "20th of Mar")
-// - formatHumanDate() comment updated to match output
+// - Added: formatHumanDateNoYear(), formatHumanDateRangeNoYear() (for quick ranges only)
+// - NavigateInner: added quickDateRanges useMemo (day ranges -> real calendar date ranges)
+// - Quick ranges UI: replaced "Day X-Y" strings with real date ranges (e.g., "6th of Feb – 20th of Feb")
 
 "use client";
 
@@ -42,8 +43,29 @@ function addDays(d: Date, n: number) {
   return x;
 }
 
-// Human date: "6th of Feb"
+// Human date: "6th of Feb 26"
 function formatHumanDate(date: Date) {
+  const day = date.getDate();
+  const suffix =
+    day % 10 === 1 && day !== 11
+      ? "st"
+      : day % 10 === 2 && day !== 12
+      ? "nd"
+      : day % 10 === 3 && day !== 13
+      ? "rd"
+      : "th";
+
+  const month = date.toLocaleString("en-GB", { month: "short" });
+  const year = date.getFullYear().toString().slice(-2);
+  return `${day}${suffix} of ${month} ${year}`;
+}
+
+function formatHumanDateRange(start: Date, end: Date) {
+  return `${formatHumanDate(start)} – ${formatHumanDate(end)}`;
+}
+
+// Quick ranges: NO YEAR (e.g., "6th of Feb")
+function formatHumanDateNoYear(date: Date) {
   const day = date.getDate();
   const suffix =
     day % 10 === 1 && day !== 11
@@ -58,8 +80,8 @@ function formatHumanDate(date: Date) {
   return `${day}${suffix} of ${month}`;
 }
 
-function formatHumanDateRange(start: Date, end: Date) {
-  return `${formatHumanDate(start)} – ${formatHumanDate(end)}`;
+function formatHumanDateRangeNoYear(start: Date, end: Date) {
+  return `${formatHumanDateNoYear(start)} – ${formatHumanDateNoYear(end)}`;
 }
 
 function startOfDay(d: Date) {
@@ -182,14 +204,30 @@ function copyFor(phase: Phase, dayIndex: number) {
   if (phase === "Follicular") {
     return {
       mood: pickUnique(
-        ["Better mood. Less hassle.", "Easier day. Fewer blow-ups.", "More even. Stuff goes smoother."],
+        [
+          "Better mood. Less hassle.",
+          "Easier day. Fewer blow-ups.",
+          "More even. Stuff goes smoother.",
+        ],
         dayIndex,
         0
       ),
-      libido: pickUnique(["Interest is picking up.", "Better than last week.", "Easier day for that."], dayIndex, 1),
-      stress: pickUnique(["Won't blow up as easy.", "More patience today.", "Normal stuff doesn't set her off."], dayIndex, 2),
+      libido: pickUnique(
+        ["Interest is picking up.", "Better than last week.", "Easier day for that."],
+        dayIndex,
+        1
+      ),
+      stress: pickUnique(
+        ["Won't blow up as easy.", "More patience today.", "Normal stuff doesn't set her off."],
+        dayIndex,
+        2
+      ),
       communication: pickUnique(
-        ["Say your bit, then leave it. Don’t turn it into a thing.", "Keep it short. No essays.", "Direct. Don’t waffle."],
+        [
+          "Say your bit, then leave it. Don’t turn it into a thing.",
+          "Keep it short. No essays.",
+          "Direct. Don’t waffle.",
+        ],
         dayIndex,
         3
       ),
@@ -212,7 +250,11 @@ function copyFor(phase: Phase, dayIndex: number) {
       libido: pickUnique(["Up for it today.", "Signals are clear.", "Obvious."], dayIndex, 1),
       stress: pickUnique(["Harder to piss her off today.", "Less friction.", "Less defensive."], dayIndex, 2),
       communication: pickUnique(
-        ["Say it, then drop it. Don’t turn it into a debate.", "How you say it matters. Keep it confident.", "Don’t waffle."],
+        [
+          "Say it, then drop it. Don’t turn it into a debate.",
+          "How you say it matters. Keep it confident.",
+          "Don’t waffle.",
+        ],
         dayIndex,
         3
       ),
@@ -243,7 +285,11 @@ function copyFor(phase: Phase, dayIndex: number) {
         3
       ),
       play: pickUnique(["Stick to the plan. No surprises.", "Handle essentials. Keep it tidy.", "Routine. Avoid big topics."], dayIndex, 4),
-      avoid: pickUnique(["Don’t spring last-minute changes.", "Don’t push for 'We’ll see' to become yes.", "Don’t make a mess of things."], dayIndex, 5),
+      avoid: pickUnique(
+        ["Don’t spring last-minute changes.", "Don’t push for 'We’ll see' to become yes.", "Don’t make a mess of things."],
+        dayIndex,
+        5
+      ),
     };
   }
 
@@ -585,6 +631,38 @@ function NavigateInner() {
     return { startDate, endDate, startDay, endDay };
   }, [day1, bleedOverride, cycleLength]);
 
+  // Quick ranges as REAL calendar dates (no year)
+  const quickDateRanges = useMemo(() => {
+    const bleed = bleedOverride ?? DEFAULTS.bleedDays;
+    const cycleLen = cycleLength ?? DEFAULTS.cycleLength;
+
+    const ovCenter = Math.round(cycleLen / 2);
+    const ovHalf = Math.floor(DEFAULTS.ovulationWindow / 2);
+    const ovStart = ovCenter - ovHalf;
+    const ovEnd = ovCenter + ovHalf;
+
+    const pmsStart = cycleLen - DEFAULTS.pmsDays + 1;
+
+    const fertileStart = ovCenter - 2;
+    const fertileEnd = ovCenter + 1;
+
+    const talkStart = bleed + 1;
+    const talkEnd = ovEnd;
+
+    const worstTalkStart = pmsStart;
+    const worstTalkEnd = cycleLen;
+
+    const d = (dayNum: number) => addDays(day1, Math.max(0, dayNum - 1));
+
+    return {
+      talk: formatHumanDateRangeNoYear(d(talkStart), d(talkEnd)),
+      worstTalk: formatHumanDateRangeNoYear(d(worstTalkStart), d(worstTalkEnd)),
+      libido: formatHumanDateRangeNoYear(d(ovStart), d(ovEnd)),
+      worstLibido: `${formatHumanDateRangeNoYear(d(1), d(bleed))}, ${formatHumanDateRangeNoYear(d(pmsStart), d(cycleLen))}`,
+      pregnancy: formatHumanDateRangeNoYear(d(fertileStart), d(fertileEnd)),
+    };
+  }, [day1, bleedOverride, cycleLength]);
+
   return (
     <main
       style={{
@@ -773,16 +851,12 @@ function NavigateInner() {
             >
               <div style={{ padding: 12, borderRadius: 12, background: "#F1FFF5", border: "1px solid #16A34A" }}>
                 <div style={{ fontSize: 11, fontWeight: 800, color: "#0B6B45", marginBottom: 4 }}>Best time to talk</div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>
-                  {bestWorstRanges(bleedOverride, cycleLength).bestDays}
-                </div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{quickDateRanges.talk}</div>
                 <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Talk, plan, chill.</div>
               </div>
               <div style={{ padding: 12, borderRadius: 12, background: "#FFECEC", border: "1px solid #EF4444" }}>
                 <div style={{ fontSize: 11, fontWeight: 800, color: "#7F1D1D", marginBottom: 4 }}>Worst time for</div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>
-                  {bestWorstRanges(bleedOverride, cycleLength).worstDays}
-                </div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{quickDateRanges.worstTalk}</div>
                 <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Heavy talks, pushing for answers, rows.</div>
               </div>
             </div>
@@ -797,25 +871,19 @@ function NavigateInner() {
             >
               <div style={{ padding: 12, borderRadius: 12, background: "#FFF7E6", border: "1px solid #F59E0B" }}>
                 <div style={{ fontSize: 11, fontWeight: 800, color: "#7A4B00", marginBottom: 4 }}>Best for libido</div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>
-                  {bestWorstRanges(bleedOverride, cycleLength).bestLibidoDays}
-                </div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{quickDateRanges.libido}</div>
                 <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>She's up for it. You'll know.</div>
               </div>
 
               <div style={{ padding: 12, borderRadius: 12, background: "#FFECEC", border: "1px solid #EF4444" }}>
                 <div style={{ fontSize: 11, fontWeight: 800, color: "#7F1D1D", marginBottom: 4 }}>Worst for libido</div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>
-                  {bestWorstRanges(bleedOverride, cycleLength).worstLibidoDays}
-                </div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{quickDateRanges.worstLibido}</div>
                 <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Not in the mood. Don't push it.</div>
               </div>
 
               <div style={{ padding: 12, borderRadius: 12, background: "#EEF7FF", border: "1px solid #2563EB" }}>
                 <div style={{ fontSize: 11, fontWeight: 800, color: "#0B4A84", marginBottom: 4 }}>Best for pregnancy</div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>
-                  {bestWorstRanges(bleedOverride, cycleLength).bestPregnancyDays}
-                </div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{quickDateRanges.pregnancy}</div>
                 <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Fertile window. Highest odds.</div>
               </div>
             </div>
