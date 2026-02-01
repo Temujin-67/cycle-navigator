@@ -9,7 +9,6 @@
     "lint": "eslint",
     "deploy": "vercel --prod",
 
-    "cap:init": "cap init \"Cycle Forecast\" com.damsstudios.cycleforecast --web-dir out",
     "cap:add:ios": "cap add ios",
     "cap:add:android": "cap add android",
     "cap:sync": "next build && cap sync",
