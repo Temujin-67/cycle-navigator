@@ -1,15 +1,21 @@
-import { redirect } from "next/navigation";
+// CHANGED LINES:
+// - Converted to client component (static-export safe)
+// - Removed async + Promise searchParams + await
+// - Read query string from window.location.search and redirect using useRouter.replace
 
-export default async function CalendarPage({
-  searchParams,
-}: {
-  searchParams: Promise<{ age?: string; day1?: string; cl?: string; bd?: string }>;
-}) {
-  const params = await searchParams;
-  const q = new URLSearchParams();
-  if (params.age) q.set("age", params.age);
-  if (params.day1) q.set("day1", params.day1);
-  if (params.cl) q.set("cl", params.cl);
-  if (params.bd) q.set("bd", params.bd);
-  redirect(`/navigate?${q.toString()}`);
+"use client";
+
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+
+export default function CalendarPage() {
+  const router = useRouter();
+
+  useEffect(() => {
+    // Preserve whatever query params were provided and forward to /navigate
+    const qs = typeof window !== "undefined" ? window.location.search : "";
+    router.replace(`/navigate${qs || ""}`);
+  }, [router]);
+
+  return null;
 }
