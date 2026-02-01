@@ -1,10 +1,9 @@
 // CHANGED LINES:
 // - src/app/navigate/page.tsx
-//   - NavigateInner: added menuBtnRef + menuPos state
-//   - NavigateInner: added openMenuAtButton() (fixed-position + viewport clamp)
-//   - NavigateInner: updated ⋮ button onClick to compute menuPos before opening
-//   - NavigateInner: dropdown container switched from position:absolute to position:fixed using menuPos
-//   - NavigateInner: close menu on scroll/resize to avoid iOS weird positioning
+//   - startNewCycle(): use current.date (the day you’re viewing) instead of new Date()
+//     so “Yeah, new cycle” works every cycle even when you swipe ahead to Day 28+.
+
+// NOTE: Full file replacement below (only minimal delta applied).
 
 "use client";
 
@@ -502,7 +501,10 @@ function NavigateInner() {
   function startNewCycle() {
     setMenuOpen(false);
 
-    const d = new Date();
+    // FIX: use the day you're viewing (current.date), not "today".
+    // Otherwise if you swipe ahead to Day 28+ quickly, the URL doesn't change on later cycles.
+    const d = current.date;
+
     const newDay1Str = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     const learnedCl = current.dayIndex;
 
