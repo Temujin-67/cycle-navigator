@@ -1,17 +1,12 @@
 // CHANGED LINES:
-// - Added: periodEndDate (yyyy-mm-dd) + showPeriodOverDateQuestion (new prompt when day1 is in the past)
-// - go(): past-date flow now asks "is it over?" THEN asks for end date if over
-// - Added: daysBetweenYMD(), periodEndMin(), periodEndMax() helpers for safe bounds
-// - navigate(): passes bd based on (periodEndDate - day1 + 1) when provided
-// - Home copy: expanded explanation (what the app is / how to use / not deterministic)
-// - Removed unused state: showPeriodStillOn (replaced by showPeriodOverDateQuestion flow)
+// - Home intro paragraph: rewritten to be clearly for men + more humorous + clearer purpose
+// - Removed "Not a predictor" framing (no explicit "Not a predictor." sentence)
 
 "use client";
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect, Suspense } from "react";
-
 const DEFAULT_CYCLE_LENGTH = 28;
 const DEFAULT_BLEED_DAYS = 5;
 const ONBOARDING_KEY = "cf_onboarding_done";
@@ -29,30 +24,14 @@ function formatDateInput(d: Date): string {
   return `${y}-${m}-${day}`;
 }
 
-function daysBetweenYMD(aYmd: string, bYmd: string): number {
-  // a -> b, in whole days
-  const a = new Date(aYmd + "T00:00:00");
-  const b = new Date(bYmd + "T00:00:00");
-  const a0 = startOfDay(a).getTime();
-  const b0 = startOfDay(b).getTime();
-  if (Number.isNaN(a0) || Number.isNaN(b0)) return 0;
-  return Math.floor((b0 - a0) / 86400000);
-}
-
 function HomePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-
   const [age, setAge] = useState("");
   const [day1, setDay1] = useState("");
-
-  // Past-date flow
+  const [showPeriodStillOn, setShowPeriodStillOn] = useState(false);
   const [showPeriodEndQuestion, setShowPeriodEndQuestion] = useState(false);
-  const [showPeriodOverDateQuestion, setShowPeriodOverDateQuestion] = useState(false);
-  const [periodEndDate, setPeriodEndDate] = useState("");
   const [periodEndDay, setPeriodEndDay] = useState(DEFAULT_BLEED_DAYS);
-
-  // Onboarding
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(1);
   const [onboardingDay1, setOnboardingDay1] = useState("");
@@ -94,30 +73,12 @@ function HomePageContent() {
 
   const todayDayIndex = (): number => daysAgo() + 1;
 
-  function periodEndMin(): string {
-    // earliest end date is day1
-    return day1 || formatDateInput(new Date());
-  }
-
-  function periodEndMax(): string {
-    // latest end date is today
-    return formatDateInput(new Date());
-  }
-
   function go() {
     if (!day1) return;
-
-    // Reset any previous prompts when user hits Go again
-    setShowPeriodEndQuestion(false);
-    setShowPeriodOverDateQuestion(false);
-
     if (day1InPast()) {
-      // New required flow:
-      // ask if period is over; if yes, ask for end date; if no, mark today as in-period
-      setShowPeriodOverDateQuestion(true);
+      setShowPeriodStillOn(true);
       return;
     }
-
     navigate(DEFAULT_CYCLE_LENGTH, DEFAULT_BLEED_DAYS);
   }
 
@@ -139,45 +100,18 @@ function HomePageContent() {
   }
 
   function confirmPeriodStillOn() {
-    // Still on today -> bleed days must cover "today"
     const bd = todayDayIndex();
-    setShowPeriodOverDateQuestion(false);
+    setShowPeriodStillOn(false);
     navigate(DEFAULT_CYCLE_LENGTH, bd);
   }
 
   function confirmPeriodOver() {
-    // Ask for end DATE (not "end day")
-    setShowPeriodOverDateQuestion(false);
-
-    const todayYmd = formatDateInput(new Date());
-    // default end date: day1 + 4 days (5-day bleed), clamped to today
-    const guess = new Date(day1 + "T12:00:00");
-    guess.setDate(guess.getDate() + (DEFAULT_BLEED_DAYS - 1));
-    const guessYmd = formatDateInput(guess);
-
-    const start = periodEndMin();
-    const end = todayYmd;
-
-    const defaultEnd = guessYmd < start ? start : guessYmd > end ? end : guessYmd;
-
-    setPeriodEndDate(defaultEnd);
+    setShowPeriodStillOn(false);
+    setPeriodEndDay(Math.min(DEFAULT_BLEED_DAYS, Math.max(1, todayDayIndex())));
     setShowPeriodEndQuestion(true);
   }
 
-  function confirmPeriodEndDate() {
-    if (!day1) return;
-    if (!periodEndDate) return;
-
-    // bd = number of days from day1 to end date, inclusive
-    const diff = daysBetweenYMD(day1, periodEndDate);
-    const bd = Math.max(1, diff + 1);
-
-    setShowPeriodEndQuestion(false);
-    navigate(DEFAULT_CYCLE_LENGTH, bd);
-  }
-
   function confirmPeriodEndDay() {
-    // legacy path still supported (kept minimal-delta), but no longer used by the new flow
     setShowPeriodEndQuestion(false);
     navigate(DEFAULT_CYCLE_LENGTH, periodEndDay);
   }
@@ -298,10 +232,10 @@ function HomePageContent() {
         <h1 style={{ fontSize: "1.75rem", fontWeight: 700, margin: 0, letterSpacing: "-0.02em" }}>Cycle Forecast</h1>
       </div>
 
-      <p style={{ fontSize: "0.9375rem", color: "var(--text-secondary)", lineHeight: 1.5, marginBottom: "1.25rem" }}>
-        A simple day-by-day read of the cycle using general hormonal patterns — to time conversations, reduce friction, and understand what “today” might feel like.
-        <br />
-        <span style={{ fontWeight: 700 }}>Not a predictor.</span> People vary. Real life overrides the pattern.
+      <p style={{ fontSize: "0.9375rem", color: "var(--text-secondary)", lineHeight: 1.45, marginBottom: "1.5rem" }}>
+        A simple day-by-day read of the cycle — built for men who want an easier life with their partner.
+        It helps you time conversations, avoid pointless friction, and get a rough idea of what “today” might feel like.
+        People vary and real life always wins — this just gives you a smarter starting point.
       </p>
 
       <label style={{ display: "block", marginTop: "1.25rem", fontSize: "0.9375rem", fontWeight: 600 }}>
@@ -391,7 +325,7 @@ function HomePageContent() {
         Go
       </button>
 
-      {showPeriodOverDateQuestion && (
+      {showPeriodStillOn && (
         <section
           style={{
             marginTop: "1.5rem",
@@ -402,10 +336,10 @@ function HomePageContent() {
           }}
         >
           <div style={{ fontSize: "0.9375rem", fontWeight: 600, marginBottom: "0.5rem" }}>
-            That was {daysAgo()} day{daysAgo() !== 1 ? "s" : ""} ago. Is the period over?
+            That was {daysAgo()} day{daysAgo() !== 1 ? "s" : ""} ago. Still on?
           </div>
           <p style={{ fontSize: "0.8125rem", color: "var(--text-secondary)", marginBottom: "0.75rem", lineHeight: 1.4 }}>
-            If it&apos;s still on, we&apos;ll count today as period. If it&apos;s over, we&apos;ll ask the end date so phases line up.
+            We assume 5 days unless you say. If it&apos;s still on, we&apos;ll mark today as period.
           </p>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
             <button
@@ -456,30 +390,34 @@ function HomePageContent() {
         >
           <div style={{ fontSize: "0.9375rem", fontWeight: 600, marginBottom: "0.5rem" }}>When did her period end?</div>
           <p style={{ fontSize: "0.8125rem", color: "var(--text-secondary)", marginBottom: "0.75rem", lineHeight: 1.4 }}>
-            Pick the last day she was bleeding. (We only use this to align the phase windows.)
+            Pick the day of her cycle it ended (Day 1 = first day of period).
           </p>
-
-          <input
-            type="date"
-            value={periodEndDate}
-            min={periodEndMin()}
-            max={periodEndMax()}
-            onChange={(e) => setPeriodEndDate(e.target.value)}
-            style={{
-              width: "100%",
-              padding: "0.875rem 1rem",
-              marginBottom: "0.75rem",
-              fontSize: "1rem",
-              border: "2px solid var(--input-border)",
-              borderRadius: 10,
-              background: "var(--input-bg)",
-              color: "var(--foreground)",
-            }}
-          />
-
+          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: "0.75rem" }}>
+            <label style={{ fontSize: "0.875rem", fontWeight: 600 }}>Ended on day</label>
+            <select
+              value={periodEndDay}
+              onChange={(e) => setPeriodEndDay(Number(e.target.value))}
+              style={{
+                padding: "0.5rem 0.75rem",
+                fontSize: "1rem",
+                border: "1px solid var(--input-border)",
+                borderRadius: 10,
+                background: "var(--input-bg)",
+                color: "var(--foreground)",
+                fontWeight: 600,
+                cursor: "pointer",
+              }}
+            >
+              {Array.from({ length: Math.max(1, Math.min(7, todayDayIndex())) }, (_, i) => i + 1).map((d) => (
+                <option key={d} value={d}>
+                  {d}
+                </option>
+              ))}
+            </select>
+          </div>
           <button
             type="button"
-            onClick={confirmPeriodEndDate}
+            onClick={confirmPeriodEndDay}
             style={{
               width: "100%",
               padding: "0.75rem 1rem",
@@ -494,20 +432,6 @@ function HomePageContent() {
           >
             Continue
           </button>
-
-          {/* legacy selector (kept for safety, hidden) */}
-          <div style={{ display: "none" }}>
-            <select value={periodEndDay} onChange={(e) => setPeriodEndDay(Number(e.target.value))}>
-              {Array.from({ length: Math.max(1, Math.min(7, todayDayIndex())) }, (_, i) => i + 1).map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
-              ))}
-            </select>
-            <button type="button" onClick={confirmPeriodEndDay}>
-              Continue legacy
-            </button>
-          </div>
         </section>
       )}
 
@@ -534,4 +458,3 @@ export default function HomePage() {
     </Suspense>
   );
 }
-
