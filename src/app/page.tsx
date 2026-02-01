@@ -1,12 +1,15 @@
 // CHANGED LINES:
-// - Home intro paragraph: rewritten to be clearly for men + more humorous + clearer purpose
-// - Removed "Not a predictor" framing (no explicit "Not a predictor." sentence)
+// - Added periodEndDate state (string) for calendar input
+// - confirmPeriodOver(): sets default periodEndDate (day1 + 4 days, clamped to today)
+// - Replaced "Ended on day" <select> with <input type="date">
+// - confirmPeriodEndDay(): converts periodEndDate -> cycle day number and navigates with bd
 
 "use client";
 
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect, Suspense } from "react";
+
 const DEFAULT_CYCLE_LENGTH = 28;
 const DEFAULT_BLEED_DAYS = 5;
 const ONBOARDING_KEY = "cf_onboarding_done";
@@ -27,11 +30,16 @@ function formatDateInput(d: Date): string {
 function HomePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
+
   const [age, setAge] = useState("");
   const [day1, setDay1] = useState("");
+
   const [showPeriodStillOn, setShowPeriodStillOn] = useState(false);
   const [showPeriodEndQuestion, setShowPeriodEndQuestion] = useState(false);
-  const [periodEndDay, setPeriodEndDay] = useState(DEFAULT_BLEED_DAYS);
+
+  // Calendar-based period end
+  const [periodEndDate, setPeriodEndDate] = useState("");
+
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(1);
   const [onboardingDay1, setOnboardingDay1] = useState("");
@@ -107,14 +115,49 @@ function HomePageContent() {
 
   function confirmPeriodOver() {
     setShowPeriodStillOn(false);
-    setPeriodEndDay(Math.min(DEFAULT_BLEED_DAYS, Math.max(1, todayDayIndex())));
+
+    // Default end date = Day 5 (day1 + 4), but never beyond today
+    if (day1) {
+      const d1 = new Date(day1 + "T00:00:00");
+      const proposed = new Date(d1);
+      proposed.setDate(proposed.getDate() + (DEFAULT_BLEED_DAYS - 1));
+
+      const today = startOfDay(new Date());
+      const chosen = proposed.getTime() > today.getTime() ? today : proposed;
+
+      // Also clamp to not be before day1
+      const finalChosen = chosen.getTime() < d1.getTime() ? d1 : chosen;
+
+      setPeriodEndDate(formatDateInput(finalChosen));
+    } else {
+      setPeriodEndDate("");
+    }
+
     setShowPeriodEndQuestion(true);
   }
 
   function confirmPeriodEndDay() {
+    if (!day1 || !periodEndDate) return;
+
+    const d1 = startOfDay(new Date(day1 + "T00:00:00"));
+    const end = startOfDay(new Date(periodEndDate + "T00:00:00"));
+    const today = startOfDay(new Date());
+
+    // Convert end date -> cycle day number (Day 1 = day1)
+    let bd = Math.floor((end.getTime() - d1.getTime()) / 86400000) + 1;
+
+    // Clamp: 1..todayDayIndex and also clamp end date to [day1, today]
+    const maxBd = Math.max(1, todayDayIndex());
+    if (end.getTime() < d1.getTime()) bd = 1;
+    if (end.getTime() > today.getTime()) bd = maxBd;
+    bd = Math.min(maxBd, Math.max(1, bd));
+
     setShowPeriodEndQuestion(false);
-    navigate(DEFAULT_CYCLE_LENGTH, periodEndDay);
+    navigate(DEFAULT_CYCLE_LENGTH, bd);
   }
+
+  const minEndDate = day1 || undefined;
+  const maxEndDate = formatDateInput(startOfDay(new Date()));
 
   return (
     <main
@@ -233,9 +276,9 @@ function HomePageContent() {
       </div>
 
       <p style={{ fontSize: "0.9375rem", color: "var(--text-secondary)", lineHeight: 1.45, marginBottom: "1.5rem" }}>
-        A simple day-by-day read of the cycle — built for men who want an easier life with their partner.
-        It helps you time conversations, avoid pointless friction, and get a rough idea of what “today” might feel like.
-        People vary and real life always wins — this just gives you a smarter starting point.
+        A simple day-by-day read of the cycle — built for men who want an easier life with their partner. It helps you time
+        conversations, avoid pointless friction, and get a rough idea of what “today” might feel like. People vary and real life
+        always wins — this just gives you a smarter starting point.
       </p>
 
       <label style={{ display: "block", marginTop: "1.25rem", fontSize: "0.9375rem", fontWeight: 600 }}>
@@ -390,31 +433,32 @@ function HomePageContent() {
         >
           <div style={{ fontSize: "0.9375rem", fontWeight: 600, marginBottom: "0.5rem" }}>When did her period end?</div>
           <p style={{ fontSize: "0.8125rem", color: "var(--text-secondary)", marginBottom: "0.75rem", lineHeight: 1.4 }}>
-            Pick the day of her cycle it ended (Day 1 = first day of period).
+            Pick the end date. We’ll convert it into the right cycle day.
           </p>
-          <div style={{ display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap", marginBottom: "0.75rem" }}>
-            <label style={{ fontSize: "0.875rem", fontWeight: 600 }}>Ended on day</label>
-            <select
-              value={periodEndDay}
-              onChange={(e) => setPeriodEndDay(Number(e.target.value))}
-              style={{
-                padding: "0.5rem 0.75rem",
-                fontSize: "1rem",
-                border: "1px solid var(--input-border)",
-                borderRadius: 10,
-                background: "var(--input-bg)",
-                color: "var(--foreground)",
-                fontWeight: 600,
-                cursor: "pointer",
-              }}
-            >
-              {Array.from({ length: Math.max(1, Math.min(7, todayDayIndex())) }, (_, i) => i + 1).map((d) => (
-                <option key={d} value={d}>
-                  {d}
-                </option>
-              ))}
-            </select>
-          </div>
+
+          <label style={{ display: "block", fontSize: "0.875rem", fontWeight: 600, marginBottom: "0.5rem" }}>
+            End date
+          </label>
+          <input
+            type="date"
+            value={periodEndDate}
+            min={minEndDate}
+            max={maxEndDate}
+            onChange={(e) => setPeriodEndDate(e.target.value)}
+            style={{
+              width: "100%",
+              padding: "0.75rem 1rem",
+              fontSize: "1rem",
+              border: "1px solid var(--input-border)",
+              borderRadius: 10,
+              background: "var(--input-bg)",
+              color: "var(--foreground)",
+              fontWeight: 600,
+              cursor: "pointer",
+              marginBottom: "0.75rem",
+            }}
+          />
+
           <button
             type="button"
             onClick={confirmPeriodEndDay}
