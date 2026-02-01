@@ -1,7 +1,10 @@
 // CHANGED LINES:
-// - Added: formatHumanDateNoYear(), formatHumanDateRangeNoYear() (for quick ranges only)
-// - NavigateInner: added quickDateRanges useMemo (day ranges -> real calendar date ranges)
-// - Quick ranges UI: replaced "Day X-Y" strings with real date ranges (e.g., "6th of Feb – 20th of Feb")
+// - src/app/navigate/page.tsx
+//   - NavigateInner: added menuBtnRef + menuPos state
+//   - NavigateInner: added openMenuAtButton() (fixed-position + viewport clamp)
+//   - NavigateInner: updated ⋮ button onClick to compute menuPos before opening
+//   - NavigateInner: dropdown container switched from position:absolute to position:fixed using menuPos
+//   - NavigateInner: close menu on scroll/resize to avoid iOS weird positioning
 
 "use client";
 
@@ -204,30 +207,14 @@ function copyFor(phase: Phase, dayIndex: number) {
   if (phase === "Follicular") {
     return {
       mood: pickUnique(
-        [
-          "Better mood. Less hassle.",
-          "Easier day. Fewer blow-ups.",
-          "More even. Stuff goes smoother.",
-        ],
+        ["Better mood. Less hassle.", "Easier day. Fewer blow-ups.", "More even. Stuff goes smoother."],
         dayIndex,
         0
       ),
-      libido: pickUnique(
-        ["Interest is picking up.", "Better than last week.", "Easier day for that."],
-        dayIndex,
-        1
-      ),
-      stress: pickUnique(
-        ["Won't blow up as easy.", "More patience today.", "Normal stuff doesn't set her off."],
-        dayIndex,
-        2
-      ),
+      libido: pickUnique(["Interest is picking up.", "Better than last week.", "Easier day for that."], dayIndex, 1),
+      stress: pickUnique(["Won't blow up as easy.", "More patience today.", "Normal stuff doesn't set her off."], dayIndex, 2),
       communication: pickUnique(
-        [
-          "Say your bit, then leave it. Don’t turn it into a thing.",
-          "Keep it short. No essays.",
-          "Direct. Don’t waffle.",
-        ],
+        ["Say your bit, then leave it. Don’t turn it into a thing.", "Keep it short. No essays.", "Direct. Don’t waffle."],
         dayIndex,
         3
       ),
@@ -236,11 +223,7 @@ function copyFor(phase: Phase, dayIndex: number) {
         dayIndex,
         4
       ),
-      avoid: pickUnique(
-        ["Don't start fights over nothing.", "Don't nitpick.", "Don't make a big deal out of small stuff."],
-        dayIndex,
-        5
-      ),
+      avoid: pickUnique(["Don't start fights over nothing.", "Don't nitpick.", "Don't make a big deal out of small stuff."], dayIndex, 5),
     };
   }
 
@@ -250,11 +233,7 @@ function copyFor(phase: Phase, dayIndex: number) {
       libido: pickUnique(["Up for it today.", "Signals are clear.", "Obvious."], dayIndex, 1),
       stress: pickUnique(["Harder to piss her off today.", "Less friction.", "Less defensive."], dayIndex, 2),
       communication: pickUnique(
-        [
-          "Say it, then drop it. Don’t turn it into a debate.",
-          "How you say it matters. Keep it confident.",
-          "Don’t waffle.",
-        ],
+        ["Say it, then drop it. Don’t turn it into a debate.", "How you say it matters. Keep it confident.", "Don’t waffle."],
         dayIndex,
         3
       ),
@@ -285,11 +264,7 @@ function copyFor(phase: Phase, dayIndex: number) {
         3
       ),
       play: pickUnique(["Stick to the plan. No surprises.", "Handle essentials. Keep it tidy.", "Routine. Avoid big topics."], dayIndex, 4),
-      avoid: pickUnique(
-        ["Don’t spring last-minute changes.", "Don’t push for 'We’ll see' to become yes.", "Don’t make a mess of things."],
-        dayIndex,
-        5
-      ),
+      avoid: pickUnique(["Don’t spring last-minute changes.", "Don’t push for 'We’ll see' to become yes.", "Don’t make a mess of things."], dayIndex, 5),
     };
   }
 
@@ -396,8 +371,7 @@ function DayCard({ d, hidePregnancy }: { d: DayInfo; hidePregnancy?: boolean }) 
     >
       <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "baseline" }}>
         <div style={{ fontWeight: 1000 as any, fontSize: 18 }}>
-          {formatHumanDate(d.date)}{" "}
-          <span style={{ color: "var(--text-secondary)", fontSize: 13 }}>· Day {d.dayIndex}</span>
+          {formatHumanDate(d.date)} <span style={{ color: "var(--text-secondary)", fontSize: 13 }}>· Day {d.dayIndex}</span>
         </div>
         <div style={{ color: "var(--text-secondary)", fontSize: 12 }}>Swipe or use buttons</div>
       </div>
@@ -443,6 +417,10 @@ function NavigateInner() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [hidePregnancy, setHidePregnancy] = useState(false);
   const [quickRangesOpen, setQuickRangesOpen] = useState(false);
+
+  // NEW: fixed-position menu anchoring (prevents iOS left-clipping)
+  const menuBtnRef = useRef<HTMLButtonElement | null>(null);
+  const [menuPos, setMenuPos] = useState<{ left: number; top: number; width: number } | null>(null);
 
   React.useEffect(() => {
     try {
@@ -495,15 +473,11 @@ function NavigateInner() {
 
   const current = useMemo(() => build(viewOffset), [viewOffset, bleedOverride, cycleLength]);
 
-  // Ask "period over?" on first day after current assumed bleed (Day 6 if default 5, then 7, 8...)
   const showBleedQuestion = !dismissBleedPrompt && current.dayIndex === bleedOverride + 1;
-  // "New period?" from Day 28; no dismiss state – prompt reappears every day until they tap "Yeah, new cycle"
   const showNewPeriodQuestion = Number.isFinite(current.dayIndex) && current.dayIndex >= 28;
   const isOverdueBanner = current.dayIndex >= 35;
 
-  const qpBase = `age=${encodeURIComponent(age)}&day1=${encodeURIComponent(day1Str)}&cl=${encodeURIComponent(
-    String(cycleLength)
-  )}`;
+  const qpBase = `age=${encodeURIComponent(age)}&day1=${encodeURIComponent(day1Str)}&cl=${encodeURIComponent(String(cycleLength))}`;
 
   function extendBleedToCurrentDay() {
     router.push(`/navigate?${qpBase}&bd=${encodeURIComponent(String(current.dayIndex))}`);
@@ -529,10 +503,7 @@ function NavigateInner() {
     setMenuOpen(false);
 
     const d = new Date();
-    const newDay1Str = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(
-      2,
-      "0"
-    )}`;
+    const newDay1Str = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     const learnedCl = current.dayIndex;
 
     try {
@@ -549,14 +520,54 @@ function NavigateInner() {
     router.refresh();
   }
 
-  // --- Swipe handling (no libs) ---
-  const drag = useRef({
-    active: false,
-    startX: 0,
-    dx: 0,
-  });
-  const touchStartX = useRef(0);
+  // NEW: open menu as position:fixed, clamped inside viewport
+  function openMenuAtButton() {
+    try {
+      if (typeof window === "undefined") {
+        setMenuOpen(true);
+        return;
+      }
 
+      const btn = menuBtnRef.current;
+      const rect = btn?.getBoundingClientRect();
+      const viewportW = window.innerWidth || 360;
+
+      const desiredW = 240; // slightly wider so text fits
+      const safeW = Math.min(desiredW, Math.max(180, viewportW - 16));
+
+      const top = (rect ? rect.bottom : 56) + 6;
+
+      // Align menu’s RIGHT edge to button’s right edge, then clamp
+      const rawLeft = rect ? rect.right - safeW : 8;
+      const left = Math.min(Math.max(8, rawLeft), Math.max(8, viewportW - safeW - 8));
+
+      setMenuPos({ left, top, width: safeW });
+      setMenuOpen(true);
+    } catch {
+      setMenuOpen(true);
+    }
+  }
+
+  // Close menu on scroll/resize (iOS Safari can shift viewport without firing “layout” as expected)
+  React.useEffect(() => {
+    if (!menuOpen) return;
+
+    const onAny = () => {
+      setMenuOpen(false);
+    };
+
+    window.addEventListener("scroll", onAny, { passive: true });
+    window.addEventListener("resize", onAny);
+
+    return () => {
+      window.removeEventListener("scroll", onAny);
+      window.removeEventListener("resize", onAny);
+    };
+  }, [menuOpen]);
+
+  // --- Swipe handling (no libs) ---
+  const drag = useRef({ active: false, startX: 0, dx: 0 });
+  const touchStartX = useRef(0);
   const [dragPx, setDragPx] = useState(0);
 
   const onPointerDown = (e: React.PointerEvent) => {
@@ -575,20 +586,14 @@ function NavigateInner() {
   };
 
   const onPointerEnd = (e?: React.PointerEvent) => {
-    if (e?.pointerType === "touch") return; // let touch handlers handle it
+    if (e?.pointerType === "touch") return;
     if (!drag.current.active) return;
     drag.current.active = false;
 
     const dx = drag.current.dx;
 
-    // threshold
-    if (dx <= -70) {
-      // swipe left → next day
-      setDelta((v) => v + 1);
-    } else if (dx >= 70) {
-      // swipe right → previous day (but don’t go below Day 1)
-      setDelta((v) => Math.max(v - 1, -baseOffset));
-    }
+    if (dx <= -70) setDelta((v) => v + 1);
+    else if (dx >= 70) setDelta((v) => Math.max(v - 1, -baseOffset));
 
     setDragPx(0);
   };
@@ -605,19 +610,13 @@ function NavigateInner() {
 
   const onTouchEnd = (e: React.TouchEvent) => {
     const dx = e.changedTouches[0].clientX - touchStartX.current;
-    if (dx <= -70) {
-      setDelta((v) => v + 1);
-    } else if (dx >= 70) {
-      setDelta((v) => Math.max(v - 1, -baseOffset));
-    }
+    if (dx <= -70) setDelta((v) => v + 1);
+    else if (dx >= 70) setDelta((v) => Math.max(v - 1, -baseOffset));
     setDragPx(0);
   };
 
-  const onTouchCancel = () => {
-    setDragPx(0);
-  };
+  const onTouchCancel = () => setDragPx(0);
 
-  // Hard chat window as real dates (Follicular: Day bleed+1 to ovEnd)
   const hardChatRange = useMemo(() => {
     const cycleLen = cycleLength;
     const ovCenter = Math.round(cycleLen / 2);
@@ -631,7 +630,6 @@ function NavigateInner() {
     return { startDate, endDate, startDay, endDay };
   }, [day1, bleedOverride, cycleLength]);
 
-  // Quick ranges as REAL calendar dates (no year)
   const quickDateRanges = useMemo(() => {
     const bleed = bleedOverride ?? DEFAULTS.bleedDays;
     const cycleLen = cycleLength ?? DEFAULTS.cycleLength;
@@ -683,6 +681,7 @@ function NavigateInner() {
             </div>
           )}
         </div>
+
         <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
           <Link href="/" style={{ fontSize: 13, textDecoration: "none", fontWeight: 900 }}>
             🏠 Home
@@ -690,10 +689,18 @@ function NavigateInner() {
           <Link href="/about" style={{ fontSize: 13, textDecoration: "none", fontWeight: 900 }}>
             About
           </Link>
+
           <div style={{ position: "relative" }}>
             <button
+              ref={menuBtnRef}
               type="button"
-              onClick={() => setMenuOpen((o) => !o)}
+              onClick={() => {
+                if (menuOpen) {
+                  setMenuOpen(false);
+                } else {
+                  openMenuAtButton();
+                }
+              }}
               aria-label="Menu"
               style={{
                 padding: "6px 8px",
@@ -708,22 +715,24 @@ function NavigateInner() {
             >
               ⋮
             </button>
+
             {menuOpen && (
               <>
                 <div style={{ position: "fixed", inset: 0, zIndex: 10 }} onClick={() => setMenuOpen(false)} aria-hidden="true" />
+
                 <div
                   style={{
-                    position: "absolute",
-                    right: 0,
-                    top: "100%",
-                    marginTop: 4,
+                    position: "fixed",
+                    left: menuPos?.left ?? 8,
+                    top: menuPos?.top ?? 56,
                     zIndex: 20,
-                    minWidth: 200,
+                    width: menuPos?.width ?? 240,
+                    maxWidth: "calc(100vw - 16px)",
                     padding: "8px 0",
                     background: "var(--background)",
                     border: "1px solid var(--input-border)",
                     borderRadius: 12,
-                    boxShadow: "0 4px 12px rgba(0,0,0,0.15)",
+                    boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
                   }}
                 >
                   <button
@@ -746,6 +755,7 @@ function NavigateInner() {
                   >
                     Start New Cycle Now
                   </button>
+
                   <Link
                     href={`/?day1=${encodeURIComponent(day1Str)}&age=${encodeURIComponent(age)}`}
                     style={{
@@ -761,6 +771,7 @@ function NavigateInner() {
                   >
                     Edit Last Period Date
                   </Link>
+
                   <button
                     type="button"
                     onClick={toggleHidePregnancy}
@@ -779,6 +790,7 @@ function NavigateInner() {
                   >
                     {hidePregnancy ? "Show Pregnancy Section" : "Hide Pregnancy Section"}
                   </button>
+
                   <Link
                     href="/about"
                     style={{
@@ -793,6 +805,7 @@ function NavigateInner() {
                   >
                     About
                   </Link>
+
                   <Link
                     href="/disclaimer"
                     style={{
@@ -842,13 +855,7 @@ function NavigateInner() {
 
         {quickRangesOpen && (
           <section style={{ marginTop: 12 }}>
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-                gap: 10,
-              }}
-            >
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10 }}>
               <div style={{ padding: 12, borderRadius: 12, background: "#F1FFF5", border: "1px solid #16A34A" }}>
                 <div style={{ fontSize: 11, fontWeight: 800, color: "#0B6B45", marginBottom: 4 }}>Best time to talk</div>
                 <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{quickDateRanges.talk}</div>
@@ -861,14 +868,7 @@ function NavigateInner() {
               </div>
             </div>
 
-            <div
-              style={{
-                display: "grid",
-                gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))",
-                gap: 10,
-                marginTop: 10,
-              }}
-            >
+            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10, marginTop: 10 }}>
               <div style={{ padding: 12, borderRadius: 12, background: "#FFF7E6", border: "1px solid #F59E0B" }}>
                 <div style={{ fontSize: 11, fontWeight: 800, color: "#7A4B00", marginBottom: 4 }}>Best for libido</div>
                 <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{quickDateRanges.libido}</div>
@@ -902,47 +902,16 @@ function NavigateInner() {
       </div>
 
       {showBleedQuestion && (
-        <section
-          style={{
-            marginTop: 12,
-            borderRadius: 16,
-            padding: 14,
-            border: "1px solid var(--input-border)",
-            background: "var(--background)",
-            boxShadow: "0 1px 0 rgba(0,0,0,0.05)",
-          }}
-        >
+        <section style={{ marginTop: 12, borderRadius: 16, padding: 14, border: "1px solid var(--input-border)", background: "var(--background)", boxShadow: "0 1px 0 rgba(0,0,0,0.05)" }}>
           <div style={{ fontWeight: 1000 as any, color: "var(--foreground)" }}>Day {current.dayIndex}: still on?</div>
           <div style={{ marginTop: 6, fontSize: 13, color: "var(--text-secondary)" }}>Usually 5–7 days. Tell us when it's over so the phases line up.</div>
 
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
-            <button
-              onClick={extendBleedToCurrentDay}
-              style={{
-                border: "1px solid var(--button-primary)",
-                background: "var(--button-primary)",
-                color: "var(--button-primary-color)",
-                padding: "10px 12px",
-                borderRadius: 12,
-                fontWeight: 1000 as any,
-                cursor: "pointer",
-              }}
-            >
+            <button onClick={extendBleedToCurrentDay} style={{ border: "1px solid var(--button-primary)", background: "var(--button-primary)", color: "var(--button-primary-color)", padding: "10px 12px", borderRadius: 12, fontWeight: 1000 as any, cursor: "pointer" }}>
               Still going
             </button>
 
-            <button
-              onClick={() => setDismissBleedPrompt(true)}
-              style={{
-                border: "1px solid var(--input-border)",
-                background: "var(--background)",
-                color: "var(--foreground)",
-                padding: "10px 12px",
-                borderRadius: 12,
-                fontWeight: 1000 as any,
-                cursor: "pointer",
-              }}
-            >
+            <button onClick={() => setDismissBleedPrompt(true)} style={{ border: "1px solid var(--input-border)", background: "var(--background)", color: "var(--foreground)", padding: "10px 12px", borderRadius: 12, fontWeight: 1000 as any, cursor: "pointer" }}>
               Over
             </button>
           </div>
@@ -950,17 +919,7 @@ function NavigateInner() {
           {current.dayIndex > 2 && (
             <div style={{ marginTop: 12, fontSize: 12, color: "var(--text-secondary)" }}>
               Ended earlier — day{" "}
-              <select
-                value={bleedOverride}
-                onChange={(e) => setBleedToDay(Number(e.target.value))}
-                style={{
-                  padding: "6px 8px",
-                  borderRadius: 8,
-                  border: "1px solid var(--input-border)",
-                  fontWeight: 700,
-                  cursor: "pointer",
-                }}
-              >
+              <select value={bleedOverride} onChange={(e) => setBleedToDay(Number(e.target.value))} style={{ padding: "6px 8px", borderRadius: 8, border: "1px solid var(--input-border)", fontWeight: 700, cursor: "pointer" }}>
                 {Array.from({ length: current.dayIndex - 1 }, (_, i) => i + 1).map((d) => (
                   <option key={d} value={d}>
                     {d}
@@ -973,35 +932,13 @@ function NavigateInner() {
       )}
 
       {showNewPeriodQuestion && (
-        <section
-          style={{
-            marginTop: 12,
-            borderRadius: 16,
-            padding: 14,
-            border: "1px solid #16A34A",
-            background: "#F1FFF5",
-            boxShadow: "0 1px 0 rgba(0,0,0,0.05)",
-          }}
-        >
-          <div style={{ fontWeight: 1000 as any, color: "var(--foreground)" }}>
-            {isOverdueBanner ? "Cycle overdue – ready to start a new one?" : `Day ${current.dayIndex}: new period?`}
-          </div>
+        <section style={{ marginTop: 12, borderRadius: 16, padding: 14, border: "1px solid #16A34A", background: "#F1FFF5", boxShadow: "0 1px 0 rgba(0,0,0,0.05)" }}>
+          <div style={{ fontWeight: 1000 as any, color: "var(--foreground)" }}>{isOverdueBanner ? "Cycle overdue – ready to start a new one?" : `Day ${current.dayIndex}: new period?`}</div>
           <div style={{ marginTop: 6, fontSize: 13, color: "var(--text-secondary)" }}>
             Tap to start fresh. We&apos;ll use this length ({current.dayIndex} days) for the next cycle.
           </div>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
-            <button
-              onClick={startNewCycle}
-              style={{
-                border: "1px solid var(--button-primary)",
-                background: "var(--button-primary)",
-                color: "var(--button-primary-color)",
-                padding: "10px 12px",
-                borderRadius: 12,
-                fontWeight: 1000 as any,
-                cursor: "pointer",
-              }}
-            >
+            <button onClick={startNewCycle} style={{ border: "1px solid var(--button-primary)", background: "var(--button-primary)", color: "var(--button-primary-color)", padding: "10px 12px", borderRadius: 12, fontWeight: 1000 as any, cursor: "pointer" }}>
               Yeah, new cycle
             </button>
           </div>
@@ -1029,34 +966,10 @@ function NavigateInner() {
         </div>
 
         <div style={{ display: "flex", justifyContent: "space-between", gap: 10, marginTop: 10 }}>
-          <button
-            onClick={() => setDelta((v) => Math.max(v - 1, -baseOffset))}
-            style={{
-              flex: 1,
-              border: "1px solid var(--input-border)",
-              background: "var(--background)",
-              color: "var(--foreground)",
-              padding: "10px 12px",
-              borderRadius: 12,
-              fontWeight: 1000 as any,
-              cursor: "pointer",
-            }}
-          >
+          <button onClick={() => setDelta((v) => Math.max(v - 1, -baseOffset))} style={{ flex: 1, border: "1px solid var(--input-border)", background: "var(--background)", color: "var(--foreground)", padding: "10px 12px", borderRadius: 12, fontWeight: 1000 as any, cursor: "pointer" }}>
             ◀ Prev
           </button>
-          <button
-            onClick={() => setDelta((v) => v + 1)}
-            style={{
-              flex: 1,
-              border: "1px solid var(--button-primary)",
-              background: "var(--button-primary)",
-              color: "var(--button-primary-color)",
-              padding: "10px 12px",
-              borderRadius: 12,
-              fontWeight: 1000 as any,
-              cursor: "pointer",
-            }}
-          >
+          <button onClick={() => setDelta((v) => v + 1)} style={{ flex: 1, border: "1px solid var(--button-primary)", background: "var(--button-primary)", color: "var(--button-primary-color)", padding: "10px 12px", borderRadius: 12, fontWeight: 1000 as any, cursor: "pointer" }}>
             Next ▶
           </button>
         </div>
