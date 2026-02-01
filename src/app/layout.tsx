@@ -1,3 +1,7 @@
+// CHANGED LINES:
+// - Added meta viewport for native WebView sizing (iOS/Android)
+// - Kept your manifest + theme-color
+
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
@@ -47,6 +51,7 @@ export default function RootLayout({
   return (
     <html lang="en" data-theme="light" suppressHydrationWarning>
       <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#16A34A" />
       </head>
