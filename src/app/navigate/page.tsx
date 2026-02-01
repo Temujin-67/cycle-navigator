@@ -929,13 +929,8 @@ function NavigateInner() {
         </div>
         <div style={{ marginTop: 10, padding: 12, borderRadius: 12, background: "#F1FFF5", border: "1px solid #16A34A" }}>
           <div style={{ fontSize: 11, fontWeight: 800, color: "#0B6B45", marginBottom: 4 }}>Best time for the hard chat</div>
-          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{formatDayRangeAsDates(day1, ranges.bestTalk)} (Follicular phase)</div>
+          <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{bestWorstRanges(bleedOverride, cycleLength).bestDays} (Follicular phase)</div>
         </div>
-        {cycleHistory.length > 0 && (
-          <div style={{ marginTop: 10, fontSize: 11, color: "var(--text-secondary)" }}>
-            Last {cycleHistory.length} cycle{cycleHistory.length !== 1 ? "s" : ""}: {cycleHistory.join(", ")} days
-          </div>
-        )}
       </section>
 
       {showBleedQuestion && (
