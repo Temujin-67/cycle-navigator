@@ -1,11 +1,8 @@
 // CHANGED LINES:
-// - Added: formatHumanDate(), formatHumanDateRange() (replaces numeric fmt)
-// - DayCard: header date now uses formatHumanDate(d.date)
-// - NavigateInner: added quickRangesOpen toggle; Quick Ranges section collapsed by default behind toggle row
-// - NavigateInner: removed redundant “Confirm new cycle” banner flow (removed showNewCycleConfirm state + banner JSX)
-// - NavigateInner: “Yeah, new cycle” now starts cycle immediately (calls startNewCycle directly)
-// - NavigateInner: menu “Start New Cycle Now” now starts cycle immediately (no extra confirm UI)
-// - NavigateInner: “Best time for the hard chat” now shows a human date range using formatHumanDateRange()
+// - startNewCycle(): uses CURRENT VIEWED DATE (current.date) as new Day 1, not "today" (fixes “Yeah, new cycle” feeling dead when user has swiped ahead)
+// - Removed cycle history (cf_cycle_history) reads/writes + state (user said no “last 5 cycles” at all)
+// - Quick ranges: all displayed ranges switched from "Day X-Y" to human date ranges (same format as “Best time for the hard chat”)
+// - Quick ranges: “Best time for the hard chat” card now uses the same computed best-talk range (kept label but unified formatting)
 
 "use client";
 
@@ -66,6 +63,13 @@ function formatHumanDate(date: Date) {
 
 function formatHumanDateRange(start: Date, end: Date) {
   return `${formatHumanDate(start)} – ${formatHumanDate(end)}`;
+}
+
+function toYMD(date: Date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
 function startOfDay(d: Date) {
@@ -155,11 +159,17 @@ function bestWorstRanges(bleedOverride: number, cycleLengthOverride?: number) {
   const worstStart = pmsStart;
   const worstEnd = cycleLength;
   return {
-    bestDays: `Day ${bestStart}-${bestEnd}`,
-    worstDays: `Day ${worstStart}-${worstEnd}`,
-    bestLibidoDays: `Day ${ovStart}-${ovEnd}`,
-    worstLibidoDays: `Day 1-${bleed}, ${pmsStart}-${worstEnd}`,
-    bestPregnancyDays: `Day ${fertileStart}-${fertileEnd}`,
+    bestStart,
+    bestEnd,
+    worstStart,
+    worstEnd,
+    ovStart,
+    ovEnd,
+    fertileStart,
+    fertileEnd,
+    bleed,
+    pmsStart,
+    cycleLength,
   };
 }
 
@@ -188,43 +198,19 @@ function copyFor(phase: Phase, dayIndex: number) {
   if (phase === "Follicular") {
     return {
       mood: pickUnique(
-        [
-          "Better mood. Less hassle.",
-          "Easier day. Fewer blow-ups.",
-          "More even. Stuff goes smoother.",
-        ],
+        ["Better mood. Less hassle.", "Easier day. Fewer blow-ups.", "More even. Stuff goes smoother."],
         dayIndex,
         0
       ),
-      libido: pickUnique(
-        ["Interest is picking up.", "Better than last week.", "Easier day for that."],
-        dayIndex,
-        1
-      ),
-      stress: pickUnique(
-        ["Won't blow up as easy.", "More patience today.", "Normal stuff doesn't set her off."],
-        dayIndex,
-        2
-      ),
+      libido: pickUnique(["Interest is picking up.", "Better than last week.", "Easier day for that."], dayIndex, 1),
+      stress: pickUnique(["Won't blow up as easy.", "More patience today.", "Normal stuff doesn't set her off."], dayIndex, 2),
       communication: pickUnique(
-        [
-          "Say your bit, then leave it. Don’t turn it into a thing.",
-          "Keep it short. No essays.",
-          "Direct. Don’t waffle.",
-        ],
+        ["Say your bit, then leave it. Don’t turn it into a thing.", "Keep it short. No essays.", "Direct. Don’t waffle."],
         dayIndex,
         3
       ),
-      play: pickUnique(
-        ["Handle practical stuff. Decide and move on.", "Make a plan and stick to it.", "Get things done. Keep plans simple."],
-        dayIndex,
-        4
-      ),
-      avoid: pickUnique(
-        ["Don't start fights over nothing.", "Don't nitpick.", "Don't make a big deal out of small stuff."],
-        dayIndex,
-        5
-      ),
+      play: pickUnique(["Handle practical stuff. Decide and move on.", "Make a plan and stick to it.", "Get things done. Keep plans simple."], dayIndex, 4),
+      avoid: pickUnique(["Don't start fights over nothing.", "Don't nitpick.", "Don't make a big deal out of small stuff."], dayIndex, 5),
     };
   }
 
@@ -234,11 +220,7 @@ function copyFor(phase: Phase, dayIndex: number) {
       libido: pickUnique(["Up for it today.", "Signals are clear.", "Obvious."], dayIndex, 1),
       stress: pickUnique(["Harder to piss her off today.", "Less friction.", "Less defensive."], dayIndex, 2),
       communication: pickUnique(
-        [
-          "Say it, then drop it. Don’t turn it into a debate.",
-          "How you say it matters. Keep it confident.",
-          "Don’t waffle.",
-        ],
+        ["Say it, then drop it. Don’t turn it into a debate.", "How you say it matters. Keep it confident.", "Don’t waffle."],
         dayIndex,
         3
       ),
@@ -269,11 +251,7 @@ function copyFor(phase: Phase, dayIndex: number) {
         3
       ),
       play: pickUnique(["Stick to the plan. No surprises.", "Handle essentials. Keep it tidy.", "Routine. Avoid big topics."], dayIndex, 4),
-      avoid: pickUnique(
-        ["Don’t spring last-minute changes.", "Don’t push for 'We’ll see' to become yes.", "Don’t make a mess of things."],
-        dayIndex,
-        5
-      ),
+      avoid: pickUnique(["Don’t spring last-minute changes.", "Don’t push for 'We’ll see' to become yes.", "Don’t make a mess of things."], dayIndex, 5),
     };
   }
 
@@ -380,8 +358,7 @@ function DayCard({ d, hidePregnancy }: { d: DayInfo; hidePregnancy?: boolean }) 
     >
       <div style={{ display: "flex", justifyContent: "space-between", gap: 12, alignItems: "baseline" }}>
         <div style={{ fontWeight: 1000 as any, fontSize: 18 }}>
-          {formatHumanDate(d.date)}{" "}
-          <span style={{ color: "var(--text-secondary)", fontSize: 13 }}>· Day {d.dayIndex}</span>
+          {formatHumanDate(d.date)} <span style={{ color: "var(--text-secondary)", fontSize: 13 }}>· Day {d.dayIndex}</span>
         </div>
         <div style={{ color: "var(--text-secondary)", fontSize: 12 }}>Swipe or use buttons</div>
       </div>
@@ -481,13 +458,11 @@ function NavigateInner() {
 
   // Ask "period over?" on first day after current assumed bleed (Day 6 if default 5, then 7, 8...)
   const showBleedQuestion = !dismissBleedPrompt && current.dayIndex === bleedOverride + 1;
-  // "New period?" from Day 28; no dismiss state – prompt reappears every day until they tap "Yeah, new cycle"
+  // "New period?" from Day 28; prompt reappears every day until they tap "Yeah, new cycle"
   const showNewPeriodQuestion = Number.isFinite(current.dayIndex) && current.dayIndex >= 28;
   const isOverdueBanner = current.dayIndex >= 35;
 
-  const qpBase = `age=${encodeURIComponent(age)}&day1=${encodeURIComponent(day1Str)}&cl=${encodeURIComponent(
-    String(cycleLength)
-  )}`;
+  const qpBase = `age=${encodeURIComponent(age)}&day1=${encodeURIComponent(day1Str)}&cl=${encodeURIComponent(String(cycleLength))}`;
 
   function extendBleedToCurrentDay() {
     router.push(`/navigate?${qpBase}&bd=${encodeURIComponent(String(current.dayIndex))}`);
@@ -499,35 +474,13 @@ function NavigateInner() {
     router.refresh();
   }
 
-  const [cycleHistory, setCycleHistory] = useState<number[]>([]);
-  React.useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem("cf_cycle_history");
-      setCycleHistory(raw ? JSON.parse(raw) : []);
-    } catch {
-      setCycleHistory([]);
-    }
-  }, []);
-
   function startNewCycle() {
     setMenuOpen(false);
 
-    const d = new Date();
-    const newDay1Str = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(
-      2,
-      "0"
-    )}`;
+    // IMPORTANT: use the currently viewed date as the new period start.
+    // If user has swiped forward, using "today" makes this look like a no-op.
+    const newDay1Str = toYMD(current.date);
     const learnedCl = current.dayIndex;
-
-    try {
-      if (typeof window !== "undefined") {
-        const raw = window.localStorage.getItem("cf_cycle_history");
-        const prev = raw ? JSON.parse(raw) : [];
-        const next = [...prev, learnedCl].slice(-5);
-        window.localStorage.setItem("cf_cycle_history", JSON.stringify(next));
-        setCycleHistory(next);
-      }
-    } catch (_) {}
 
     router.replace(`/navigate?age=${encodeURIComponent(age)}&day1=${encodeURIComponent(newDay1Str)}&bd=5&cl=${learnedCl}`);
     router.refresh();
@@ -601,18 +554,30 @@ function NavigateInner() {
     setDragPx(0);
   };
 
-  // Hard chat window as real dates (Follicular: Day bleed+1 to ovEnd)
-  const hardChatRange = useMemo(() => {
-    const cycleLen = cycleLength;
-    const ovCenter = Math.round(cycleLen / 2);
-    const ovHalf = Math.floor(DEFAULTS.ovulationWindow / 2);
-    const ovEnd = ovCenter + ovHalf;
-    const startDay = (bleedOverride ?? DEFAULTS.bleedDays) + 1;
-    const endDay = ovEnd;
+  const quickRanges = useMemo(() => {
+    const meta = bestWorstRanges(bleedOverride, cycleLength);
 
-    const startDate = addDays(day1, startDay - 1);
-    const endDate = addDays(day1, endDay - 1);
-    return { startDate, endDate, startDay, endDay };
+    const rangeFromDays = (startDay: number, endDay: number) => {
+      const startDate = addDays(day1, startDay - 1);
+      const endDate = addDays(day1, endDay - 1);
+      return formatHumanDateRange(startDate, endDate);
+    };
+
+    const bestTalk = rangeFromDays(meta.bestStart, meta.bestEnd);
+    const worstTalk = rangeFromDays(meta.worstStart, meta.worstEnd);
+    const bestLibido = rangeFromDays(meta.ovStart, meta.ovEnd);
+    const worstLibidoA = rangeFromDays(1, meta.bleed);
+    const worstLibidoB = rangeFromDays(meta.pmsStart, meta.cycleLength);
+    const bestPregnancy = rangeFromDays(meta.fertileStart, meta.fertileEnd);
+
+    return {
+      bestTalk,
+      worstTalk,
+      bestLibido,
+      worstLibido: `${worstLibidoA}, ${worstLibidoB}`,
+      bestPregnancy,
+      hardChat: bestTalk,
+    };
   }, [day1, bleedOverride, cycleLength]);
 
   return (
@@ -803,16 +768,12 @@ function NavigateInner() {
             >
               <div style={{ padding: 12, borderRadius: 12, background: "#F1FFF5", border: "1px solid #16A34A" }}>
                 <div style={{ fontSize: 11, fontWeight: 800, color: "#0B6B45", marginBottom: 4 }}>Best time to talk</div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>
-                  {bestWorstRanges(bleedOverride, cycleLength).bestDays}
-                </div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{quickRanges.bestTalk}</div>
                 <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Talk, plan, chill.</div>
               </div>
               <div style={{ padding: 12, borderRadius: 12, background: "#FFECEC", border: "1px solid #EF4444" }}>
                 <div style={{ fontSize: 11, fontWeight: 800, color: "#7F1D1D", marginBottom: 4 }}>Worst time for</div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>
-                  {bestWorstRanges(bleedOverride, cycleLength).worstDays}
-                </div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{quickRanges.worstTalk}</div>
                 <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Heavy talks, pushing for answers, rows.</div>
               </div>
             </div>
@@ -827,37 +788,26 @@ function NavigateInner() {
             >
               <div style={{ padding: 12, borderRadius: 12, background: "#FFF7E6", border: "1px solid #F59E0B" }}>
                 <div style={{ fontSize: 11, fontWeight: 800, color: "#7A4B00", marginBottom: 4 }}>Best for libido</div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>
-                  {bestWorstRanges(bleedOverride, cycleLength).bestLibidoDays}
-                </div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{quickRanges.bestLibido}</div>
                 <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>She's up for it. You'll know.</div>
               </div>
 
               <div style={{ padding: 12, borderRadius: 12, background: "#FFECEC", border: "1px solid #EF4444" }}>
                 <div style={{ fontSize: 11, fontWeight: 800, color: "#7F1D1D", marginBottom: 4 }}>Worst for libido</div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>
-                  {bestWorstRanges(bleedOverride, cycleLength).worstLibidoDays}
-                </div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{quickRanges.worstLibido}</div>
                 <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Not in the mood. Don't push it.</div>
               </div>
 
               <div style={{ padding: 12, borderRadius: 12, background: "#EEF7FF", border: "1px solid #2563EB" }}>
                 <div style={{ fontSize: 11, fontWeight: 800, color: "#0B4A84", marginBottom: 4 }}>Best for pregnancy</div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>
-                  {bestWorstRanges(bleedOverride, cycleLength).bestPregnancyDays}
-                </div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{quickRanges.bestPregnancy}</div>
                 <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Fertile window. Highest odds.</div>
               </div>
             </div>
 
             <div style={{ marginTop: 10, padding: 12, borderRadius: 12, background: "#F1FFF5", border: "1px solid #16A34A" }}>
               <div style={{ fontSize: 11, fontWeight: 800, color: "#0B6B45", marginBottom: 4 }}>Best time for the hard chat</div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>
-                {formatHumanDateRange(hardChatRange.startDate, hardChatRange.endDate)}{" "}
-                <span style={{ color: "var(--text-secondary)", fontWeight: 800 }}>
-                  ({bestWorstRanges(bleedOverride, cycleLength).bestDays}, Follicular phase)
-                </span>
-              </div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{quickRanges.hardChat}</div>
             </div>
           </section>
         )}
