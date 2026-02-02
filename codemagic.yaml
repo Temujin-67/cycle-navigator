@@ -4,7 +4,7 @@ workflows:
     max_build_duration: 60
     environment:
       vars:
-        CM_CLONE_DEPTH: 0
+        CM_CLONE_DEPTH: 1
     scripts:
       - name: Install dependencies
         script: npm ci
@@ -18,3 +18,4 @@ workflows:
           ./gradlew assembleRelease
     artifacts:
       - android/app/build/outputs/**/*.apk
+
