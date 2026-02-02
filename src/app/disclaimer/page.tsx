@@ -17,12 +17,12 @@ export default function DisclaimerPage() {
       </div>
 
       <p style={{ marginTop: "1rem", lineHeight: 1.6, fontSize: "0.9375rem" }}>
-        By using Cycle Forecast you agree to the following. If you do not agree, do not use the app.
+        By using Her Mood Map you agree to the following. If you do not agree, do not use the app.
       </p>
 
       <h2 style={{ marginTop: "1.5rem", fontSize: "1.125rem", fontWeight: 700 }}>Not medical or clinical advice</h2>
       <p style={{ marginTop: "0.5rem", lineHeight: 1.6 }}>
-        Cycle Forecast is <b>for informational and educational use only</b>. It is <b>not medical advice</b>, not clinical
+        Her Mood Map is <b>for informational and educational use only</b>. It is <b>not medical advice</b>, not clinical
         advice, and not a substitute for advice from a qualified healthcare provider. Do not use this app to make
         medical decisions, to diagnose, treat, or manage any health condition, or for contraception or family planning.
         Always consult a healthcare provider for health-related decisions.
@@ -38,7 +38,7 @@ export default function DisclaimerPage() {
 
       <h2 style={{ marginTop: "1.5rem", fontSize: "1.125rem", fontWeight: 700 }}>No guarantees; no liability</h2>
       <p style={{ marginTop: "0.5rem", lineHeight: 1.6 }}>
-        Cycle Forecast is provided &quot;as is&quot; without warranties of any kind. We do not guarantee accuracy, completeness,
+       Her Mood Map is provided &quot;as is&quot; without warranties of any kind. We do not guarantee accuracy, completeness,
         or fitness for any purpose. To the fullest extent permitted by law, we exclude liability for any loss or damage
         arising from your use of the app.
       </p>
