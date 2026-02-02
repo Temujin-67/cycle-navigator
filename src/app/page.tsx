@@ -1,8 +1,5 @@
 // CHANGED LINES:
-// - Added periodEndDate state (string) for calendar input
-// - confirmPeriodOver(): sets default periodEndDate (day1 + 4 days, clamped to today)
-// - Replaced "Ended on day" <select> with <input type="date">
-// - confirmPeriodEndDay(): converts periodEndDate -> cycle day number and navigates with bd
+// - Changed Home page H1 from "Cycle Forecast" to "Her Mood Map"
 
 "use client";
 
@@ -272,7 +269,7 @@ function HomePageContent() {
       )}
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
-        <h1 style={{ fontSize: "1.75rem", fontWeight: 700, margin: 0, letterSpacing: "-0.02em" }}>Cycle Forecast</h1>
+        <h1 style={{ fontSize: "1.75rem", fontWeight: 700, margin: 0, letterSpacing: "-0.02em" }}>Her Mood Map</h1>
       </div>
 
       <p style={{ fontSize: "0.9375rem", color: "var(--text-secondary)", lineHeight: 1.45, marginBottom: "1.5rem" }}>
