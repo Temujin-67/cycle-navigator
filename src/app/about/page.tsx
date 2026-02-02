@@ -17,7 +17,7 @@ export default function AboutPage() {
       </div>
 
       <p style={{ marginTop: "1rem", lineHeight: 1.5 }}>
-        Cycle Forecast is built on <b>general hormonal cycle patterns</b>. It helps men understand what phase she&apos;s in
+        Her Mood Map is built on <b>general hormonal cycle patterns</b>. It helps men understand what phase she&apos;s in
         and how it affects her mood — so you get fewer arguments and a better relationship. No blame. Just practical
         awareness.
       </p>
