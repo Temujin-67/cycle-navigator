@@ -703,7 +703,7 @@ function NavigateInner() {
     >
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
         <div>
-          <div style={{ fontSize: 22, fontWeight: 1000 as any, letterSpacing: -0.2 }}>Cycle Forecast</div>
+          <div style={{ fontSize: 22, fontWeight: 1000 as any, letterSpacing: -0.2 }}>Her Mood Map</div>
           {delta === 0 && (
             <div style={{ fontSize: 12, color: "var(--text-secondary)", marginTop: 2 }}>
               Today: {build(baseOffset).phase} phase — Conflict risk: {build(baseOffset).risk}
