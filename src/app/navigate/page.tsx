@@ -872,7 +872,7 @@ function NavigateInner() {
             fontSize: 13,
           }}
         >
-          <span>📊 Quick ranges</span>
+       <span>📅 Month overview</span>
           <span aria-hidden="true" style={{ fontSize: 16, lineHeight: 1 }}>
             {quickRangesOpen ? "▾" : "▸"}
           </span>
