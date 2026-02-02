@@ -1,6 +1,5 @@
 // CHANGED LINES:
-// - Added meta viewport for native WebView sizing (iOS/Android)
-// - Kept your manifest + theme-color
+// - Renamed app from "Cycle Forecast" to "Her Mood Map" in metadata, OpenGraph, and Twitter
 
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
@@ -20,25 +19,25 @@ const siteUrl = "https://cycle-navigator.vercel.app";
 
 export const metadata: Metadata = {
   title: {
-    default: "Cycle Forecast",
-    template: "%s | Cycle Forecast",
+    default: "Her Mood Map",
+    template: "%s | Her Mood Map",
   },
   description:
-    "Know her cycle phase. Best and worst days for conversations, libido, pregnancy. Fewer arguments, better relationship.",
+    "Understand your partner’s cycle-related mood patterns. Better timing, fewer misunderstandings. Awareness, not prediction.",
   metadataBase: new URL(siteUrl),
   openGraph: {
-    title: "Cycle Forecast",
+    title: "Her Mood Map",
     description:
-      "Know her cycle phase. Best and worst days for conversations, libido, pregnancy. Fewer arguments, better relationship.",
+      "Understand your partner’s cycle-related mood patterns. Better timing, fewer misunderstandings. Awareness, not prediction.",
     url: siteUrl,
-    siteName: "Cycle Forecast",
+    siteName: "Her Mood Map",
     type: "website",
   },
   twitter: {
     card: "summary",
-    title: "Cycle Forecast",
+    title: "Her Mood Map",
     description:
-      "Know her cycle phase. Best and worst days for conversations, libido, pregnancy. Fewer arguments, better relationship.",
+      "Understand your partner’s cycle-related mood patterns. Better timing, fewer misunderstandings. Awareness, not prediction.",
   },
   robots: "index, follow",
 };
@@ -51,7 +50,10 @@ export default function RootLayout({
   return (
     <html lang="en" data-theme="light" suppressHydrationWarning>
       <head>
-        <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+        <meta
+          name="viewport"
+          content="width=device-width, initial-scale=1, viewport-fit=cover"
+        />
         <link rel="manifest" href="/manifest.json" />
         <meta name="theme-color" content="#16A34A" />
       </head>
