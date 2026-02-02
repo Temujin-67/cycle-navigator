@@ -1002,7 +1002,17 @@ function NavigateInner() {
             Next ▶
           </button>
         </div>
-      </div>
+      <div
+  style={{
+    marginTop: 16,
+    fontSize: 11,
+    color: "var(--text-secondary)",
+    textAlign: "center",
+  }}
+>
+  A DAMS Labs project
+</div>
+
     </main>
   );
 }
