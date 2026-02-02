@@ -1027,16 +1027,18 @@ function NavigateInner() {
           </button>
         </div>
 
-        <div
-          style={{
-            marginTop: 16,
-            fontSize: 11,
-            color: "var(--text-secondary)",
-            textAlign: "center",
-          }}
-        >
-          A DAMS Labs project
-        </div>
+       <div
+  style={{
+    marginTop: 16,
+    fontSize: 12,
+    color: "var(--text-secondary)",
+    textAlign: "center",
+    letterSpacing: "0.02em",
+  }}
+>
+  Built by <span style={{ fontWeight: 900, color: "var(--foreground)" }}>DAMS Labs</span>
+</div>
+
       </div>
     </main>
   );
