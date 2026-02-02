@@ -1,9 +1,10 @@
 // CHANGED LINES:
 // - src/app/navigate/page.tsx
-//   - startNewCycle(): use current.date (the day you’re viewing) instead of new Date()
-//     so “Yeah, new cycle” works every cycle even when you swipe ahead to Day 28+.
-
-// NOTE: Full file replacement below (only minimal delta applied).
+//   - Added touch axis intent detection refs (touchStartY, touchMode)
+//   - onTouchStart(): record X+Y, reset mode, do NOT preventDefault
+//   - onTouchMove(): only preventDefault + set dragPx when horizontal intent detected; otherwise allow native vertical scroll
+//   - onTouchEnd(): only apply swipe + reset dragPx when horizontal intent detected; always reset mode
+//   - Swipe container style: touchAction changed from "none" to "pan-y" to restore vertical scrolling while keeping horizontal swipe logic
 
 "use client";
 
@@ -570,6 +571,8 @@ function NavigateInner() {
   // --- Swipe handling (no libs) ---
   const drag = useRef({ active: false, startX: 0, dx: 0 });
   const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
+  const touchMode = useRef<"unknown" | "horizontal" | "vertical">("unknown");
   const [dragPx, setDragPx] = useState(0);
 
   const onPointerDown = (e: React.PointerEvent) => {
@@ -602,22 +605,46 @@ function NavigateInner() {
 
   const onTouchStart = (e: React.TouchEvent) => {
     touchStartX.current = e.touches[0].clientX;
-    e.preventDefault();
+    touchStartY.current = e.touches[0].clientY;
+    touchMode.current = "unknown";
   };
 
   const onTouchMove = (e: React.TouchEvent) => {
-    setDragPx(e.touches[0].clientX - touchStartX.current);
-    e.preventDefault();
+    const dx = e.touches[0].clientX - touchStartX.current;
+    const dy = e.touches[0].clientY - touchStartY.current;
+
+    if (touchMode.current === "unknown") {
+      const ax = Math.abs(dx);
+      const ay = Math.abs(dy);
+
+      if (ax >= 10 || ay >= 10) {
+        touchMode.current = ax > ay ? "horizontal" : "vertical";
+      } else {
+        return;
+      }
+    }
+
+    if (touchMode.current === "horizontal") {
+      setDragPx(dx);
+      e.preventDefault();
+    }
+    // vertical: do nothing (native scroll)
   };
 
   const onTouchEnd = (e: React.TouchEvent) => {
-    const dx = e.changedTouches[0].clientX - touchStartX.current;
-    if (dx <= -70) setDelta((v) => v + 1);
-    else if (dx >= 70) setDelta((v) => Math.max(v - 1, -baseOffset));
-    setDragPx(0);
+    if (touchMode.current === "horizontal") {
+      const dx = e.changedTouches[0].clientX - touchStartX.current;
+      if (dx <= -70) setDelta((v) => v + 1);
+      else if (dx >= 70) setDelta((v) => Math.max(v - 1, -baseOffset));
+      setDragPx(0);
+    }
+    touchMode.current = "unknown";
   };
 
-  const onTouchCancel = () => setDragPx(0);
+  const onTouchCancel = () => {
+    setDragPx(0);
+    touchMode.current = "unknown";
+  };
 
   const hardChatRange = useMemo(() => {
     const cycleLen = cycleLength;
@@ -959,7 +986,7 @@ function NavigateInner() {
           onTouchEnd={onTouchEnd}
           onTouchCancel={onTouchCancel}
           style={{
-            touchAction: "none",
+            touchAction: "pan-y",
             transform: `translateX(${dragPx}px)`,
             transition: drag.current.active ? "none" : "transform 160ms ease-out",
           }}
