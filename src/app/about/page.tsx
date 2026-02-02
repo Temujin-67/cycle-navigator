@@ -12,7 +12,7 @@ export default function AboutPage() {
       }}
     >
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-        <h1 style={{ fontSize: "1.75rem", fontWeight: 700, margin: 0 }}>About Cycle Forecast</h1>
+        <h1 style={{ fontSize: "1.75rem", fontWeight: 700, margin: 0 }}>About Her Mood Map</h1>
         <Link href="/" style={{ fontSize: 13, fontWeight: 900 }}>Home</Link>
       </div>
 
