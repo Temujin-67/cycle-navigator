@@ -1041,3 +1041,16 @@ function NavigateInner() {
 >
   A <span style={{ fontWeight: 900, color: "var(--foreground)" }}>DAMS Labs</span> project
 </div>
+              </div>
+    </main>
+  );
+}
+
+export default function Page() {
+  return (
+    <Suspense fallback={<div style={{ padding: 16, fontFamily: "system-ui" }}>Loading…</div>}>
+      <NavigateInner />
+    </Suspense>
+  );
+}
+
