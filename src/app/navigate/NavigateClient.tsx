@@ -211,7 +211,7 @@ export default function NavigateClient() {
 
   return (
     <main style={{ maxWidth: 720, margin: "40px auto", padding: 20, fontFamily: "system-ui" }}>
-      <h1 style={{ marginTop: 0 }}>Cycle Forecast</h1>
+      <h1 style={{ marginTop: 0 }}>Her Mood Map</h1>
 
       <div style={{ fontSize: 13, color: "#444", marginBottom: 14 }}>
         Pattern-based. Fewer arguments, better relationship. Individual responses differ. Not medical advice.
