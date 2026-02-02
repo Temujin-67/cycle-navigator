@@ -1007,9 +1007,10 @@ function NavigateInner() {
               fontWeight: 1000 as any,
               cursor: "pointer",
             }}
-          >
-            ◀ Prev
+            > 
+            ◀ Prev day
           </button>
+
           <button
             onClick={() => setDelta((v) => v + 1)}
             style={{
@@ -1023,31 +1024,22 @@ function NavigateInner() {
               cursor: "pointer",
             }}
           >
-            Next ▶
+            Next day ▶
           </button>
         </div>
 
-       <div
-  style={{
-    marginTop: 16,
-    fontSize: 12,
-    color: "var(--text-secondary)",
-    textAlign: "center",
-    letterSpacing: "0.02em",
-  }}
->
- A <span style={{ fontWeight: 900, color: "var(--foreground)" }}>DAMS Labs</span> project
-
-
+        <div
+          style={{
+            marginTop: 16,
+            fontSize: 12,
+            color: "var(--text-secondary)",
+            textAlign: "center",
+            letterSpacing: "0.02em",
+          }}
+        >
+          A <span style={{ fontWeight: 900, color: "var(--foreground)" }}>DAMS Labs</span> project
+        </div>
       </div>
     </main>
-  );
-}
-
-export default function Page() {
-  return (
-    <Suspense fallback={<div style={{ padding: 16, fontFamily: "system-ui" }}>Loading…</div>}>
-      <NavigateInner />
-    </Suspense>
   );
 }
