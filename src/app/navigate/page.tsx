@@ -1012,34 +1012,32 @@ function NavigateInner() {
           </button>
 
           <button
-            onClick={() => setDelta((v) => v + 1)}
-            style={{
-              flex: 1,
-              border: "1px solid var(--button-primary)",
-              background: "var(--button-primary)",
-              color: "var(--button-primary-color)",
-              padding: "10px 12px",
-              borderRadius: 12,
-              fontWeight: 1000 as any,
-              cursor: "pointer",
-            }}
-          >
-            Next day ▶
-          </button>
-        </div>
+  onClick={() => setDelta((v) => v + 1)}
+  style={{
+    flex: 1,
+    border: "1px solid var(--button-primary)",
+    background: "linear-gradient(135deg, #16A34A, #22C55E)",
+    color: "#ffffff",
+    padding: "11px 12px",
+    borderRadius: 14,
+    fontWeight: 1000 as any,
+    cursor: "pointer",
+    boxShadow: "0 6px 18px rgba(22,163,74,0.35)",
+  }}
+>
+  Next day →
+</button>
+</div>
 
-        <div
-          style={{
-            marginTop: 16,
-            fontSize: 12,
-            color: "var(--text-secondary)",
-            textAlign: "center",
-            letterSpacing: "0.02em",
-          }}
-        >
-          A <span style={{ fontWeight: 900, color: "var(--foreground)" }}>DAMS Labs</span> project
-        </div>
-      </div>
-    </main>
-  );
-}
+<div
+  style={{
+    marginTop: 18,
+    fontSize: 11,
+    color: "var(--text-secondary)",
+    textAlign: "center",
+    letterSpacing: "0.04em",
+    textTransform: "uppercase",
+  }}
+>
+  A <span style={{ fontWeight: 900, color: "var(--foreground)" }}>DAMS Labs</span> project
+</div>
