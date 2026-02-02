@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Cycle Forecast</string>
+    <string name="title_activity_main">Cycle Forecast</string>
+    <string name="package_name">com.damsstudios.cycleforecast</string>
+    <string name="custom_url_scheme">com.damsstudios.cycleforecast</string>
+</resources>
