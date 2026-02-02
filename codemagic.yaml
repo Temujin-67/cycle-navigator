@@ -2,20 +2,25 @@ workflows:
   android-release:
     name: Android Release
     max_build_duration: 60
+
     environment:
-      vars:
-        CM_CLONE_DEPTH: 1
+      node: 20
+
     scripts:
       - name: Install dependencies
-        script: npm ci
+        script: npm install
+
       - name: Build web
         script: npm run build
+
       - name: Capacitor sync
         script: npx cap sync android
+
       - name: Build Android APK
         script: |
           cd android
+          chmod +x gradlew
           ./gradlew assembleRelease
+
     artifacts:
       - android/app/build/outputs/**/*.apk
-
