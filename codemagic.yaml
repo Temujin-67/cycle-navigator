@@ -1,6 +1,6 @@
 workflows:
-  android-release:
-    name: Android Release
+  android-debug:
+    name: Android Debug Build
     max_build_duration: 60
 
     environment:
@@ -16,12 +16,11 @@ workflows:
       - name: Capacitor sync
         script: npx cap sync android
 
-      - name: Build Android APK
+      - name: Build Android debug APK
         script: |
           cd android
           chmod +x gradlew
-       ./gradlew assembleDebug
+          ./gradlew assembleDebug
 
     artifacts:
-      - android/app/build/outputs/**/*.apk
-
+      - android/app/build/outputs/apk/debug/*.apk
