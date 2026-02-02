@@ -990,29 +990,54 @@ function NavigateInner() {
             transform: `translateX(${dragPx}px)`,
             transition: drag.current.active ? "none" : "transform 160ms ease-out",
           }}
-        >
+               >
           <DayCard d={current} hidePregnancy={hidePregnancy} />
         </div>
 
         <div style={{ display: "flex", justifyContent: "space-between", gap: 10, marginTop: 10 }}>
-          <button onClick={() => setDelta((v) => Math.max(v - 1, -baseOffset))} style={{ flex: 1, border: "1px solid var(--input-border)", background: "var(--background)", color: "var(--foreground)", padding: "10px 12px", borderRadius: 12, fontWeight: 1000 as any, cursor: "pointer" }}>
+          <button
+            onClick={() => setDelta((v) => Math.max(v - 1, -baseOffset))}
+            style={{
+              flex: 1,
+              border: "1px solid var(--input-border)",
+              background: "var(--background)",
+              color: "var(--foreground)",
+              padding: "10px 12px",
+              borderRadius: 12,
+              fontWeight: 1000 as any,
+              cursor: "pointer",
+            }}
+          >
             ◀ Prev
           </button>
-          <button onClick={() => setDelta((v) => v + 1)} style={{ flex: 1, border: "1px solid var(--button-primary)", background: "var(--button-primary)", color: "var(--button-primary-color)", padding: "10px 12px", borderRadius: 12, fontWeight: 1000 as any, cursor: "pointer" }}>
+          <button
+            onClick={() => setDelta((v) => v + 1)}
+            style={{
+              flex: 1,
+              border: "1px solid var(--button-primary)",
+              background: "var(--button-primary)",
+              color: "var(--button-primary-color)",
+              padding: "10px 12px",
+              borderRadius: 12,
+              fontWeight: 1000 as any,
+              cursor: "pointer",
+            }}
+          >
             Next ▶
           </button>
         </div>
-      <div
-  style={{
-    marginTop: 16,
-    fontSize: 11,
-    color: "var(--text-secondary)",
-    textAlign: "center",
-  }}
->
-  A DAMS Labs project
-</div>
 
+        <div
+          style={{
+            marginTop: 16,
+            fontSize: 11,
+            color: "var(--text-secondary)",
+            textAlign: "center",
+          }}
+        >
+          A DAMS Labs project
+        </div>
+      </div>
     </main>
   );
 }
