@@ -1036,8 +1036,8 @@ function NavigateInner() {
     letterSpacing: "0.02em",
   }}
 >
-  Built by <span style={{ fontWeight: 900, color: "var(--foreground)" }}>DAMS Labs</span>
-</div>
+ A <span style={{ fontWeight: 900, color: "var(--foreground)" }}>DAMS Labs</span> project
+
 
       </div>
     </main>
