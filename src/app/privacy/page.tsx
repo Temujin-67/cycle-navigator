@@ -1,6 +1,6 @@
 export const metadata = {
   title: "Privacy Policy — Her Mood Map",
-};
+}; 
 
 export default function PrivacyPage() {
   return (
