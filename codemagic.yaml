@@ -36,7 +36,7 @@ workflows:
       # ✅ THIS makes Codemagic mount your uploaded .p12 + provisioning profile into the build VM
       ios_signing:
         distribution_type: app_store
-        bundle_identifier: com.damsstudio.hermoodmap
+        bundle_identifier: com.damsstudios.hermoodmap
 
       vars:
         APP_TEAM_ID: "KX8Z996CGK"
@@ -85,3 +85,4 @@ workflows:
     artifacts:
       - build/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
+
