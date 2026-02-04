@@ -25,6 +25,7 @@ workflows:
     artifacts:
       - android/app/build/outputs/apk/debug/*.apk
 
+
   ios-release:
     name: iOS Release (IPA)
     max_build_duration: 60
@@ -32,6 +33,19 @@ workflows:
     environment:
       node: 20
       xcode: latest
+
+      # 🔴 HARD-WIRED (no UI, no groups)
+      vars:
+        # App Store Connect API
+        APP_STORE_CONNECT_ISSUER_ID: "PASTE_ISSUER_ID_HERE"
+        APP_STORE_CONNECT_KEY_ID: "PASTE_KEY_ID_HERE"
+        APP_STORE_CONNECT_PRIVATE_KEY: |
+          -----BEGIN PRIVATE KEY-----
+          PASTE_FULL_P8_CONTENT_HERE
+          -----END PRIVATE KEY-----
+
+        # Signing
+        CM_IOS_PROVISIONING_PROFILE_SPECIFIER: "HerMoodMap_AppStore"
 
     scripts:
       - name: Install dependencies
@@ -45,14 +59,11 @@ workflows:
           npx cap add ios || true
           npx cap sync ios
 
-      - name: Install signing assets (cert + profile) into keychain
+      - name: Install signing assets
         script: |
-          # Creates/uses Codemagic keychain for this build
           keychain initialize
 
-          # Pulls the correct signing files from Apple based on your connected credentials
-          # and installs them into the keychain + provisioning profiles directory.
-          app-store-connect fetch-signing-files "com.damsstudio.hermoodmap" \
+          app-store-connect fetch-signing-files com.damsstudio.hermoodmap \
             --type IOS_APP_STORE \
             --create
 
@@ -60,9 +71,6 @@ workflows:
         script: |
           set -e
           cd ios/App
-
-          # Ensure profile name is set for ExportOptions mapping
-          export CM_IOS_PROVISIONING_PROFILE_SPECIFIER="HerMoodMap_AppStore"
 
           xcodebuild \
             -workspace App.xcworkspace \
@@ -73,7 +81,7 @@ workflows:
             DEVELOPMENT_TEAM=KX8Z996CGK \
             CODE_SIGN_STYLE=Manual \
             CODE_SIGN_IDENTITY="Apple Distribution" \
-            PROVISIONING_PROFILE_SPECIFIER="$CM_IOS_PROVISIONING_PROFILE_SPECIFIER" \
+            PROVISIONING_PROFILE_SPECIFIER="HerMoodMap_AppStore" \
             CODE_SIGNING_ALLOWED=NO \
             clean archive
 
