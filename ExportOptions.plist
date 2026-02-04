@@ -3,13 +3,26 @@
 <plist version="1.0">
 <dict>
   <key>method</key>
-  <string>app-store</string>
+  <string>app-store-connect</string>
+
+  <key>teamID</key>
+  <string>KX8Z996CGK</string>
+
   <key>signingStyle</key>
-  <string>automatic</string>
-  <key>compileBitcode</key>
-  <false/>
+  <string>manual</string>
+
+  <key>provisioningProfiles</key>
+  <dict>
+    <key>com.damsstudio.hermoodmap</key>
+    <string>HerMoodMap_AppStore</string>
+  </dict>
+
   <key>destination</key>
   <string>export</string>
+
+  <key>compileBitcode</key>
+  <false/>
+
   <key>stripSwiftSymbols</key>
   <true/>
 </dict>
