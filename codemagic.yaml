@@ -40,8 +40,11 @@ workflows:
       - name: Build web
         script: npm run build
 
-      - name: Capacitor sync (iOS)
-        script: npx cap sync ios
+            - name: Capacitor add + sync (iOS)
+        script: |
+          npx cap add ios || true
+          npx cap sync ios
+
 
       - name: Build iOS archive + export IPA
         script: |
@@ -50,3 +53,4 @@ workflows:
             -workspace App.xcworkspace \
             -scheme App \
             -configuration Relea
+
