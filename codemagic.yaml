@@ -33,7 +33,7 @@ workflows:
       node: 20
       xcode: latest
 
-      # This mounts your uploaded Apple Distribution cert + App Store profile into the build VM
+      # Codemagic mounts the App Store profile for this bundle id
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.damsstudios.hermoodmap
@@ -53,17 +53,19 @@ workflows:
           npx cap add ios || true
           npx cap sync ios
 
-      - name: Install signing assets from Codemagic (P12 + profiles)
+      - name: Install signing certificates (DO NOT patch Xcode project)
         script: |
           keychain initialize
           keychain add-certificates
-          xcode-project use-profiles
 
       - name: Build iOS archive + export IPA
         script: |
           set -e
           cd ios/App
 
+          # IMPORTANT:
+          # - Automatic signing
+          # - Clear any injected manual profile settings if present
           xcodebuild \
             -workspace App.xcworkspace \
             -scheme App \
@@ -73,6 +75,8 @@ workflows:
             -archivePath "$CM_BUILD_DIR/build/App.xcarchive" \
             DEVELOPMENT_TEAM="$APP_TEAM_ID" \
             CODE_SIGN_STYLE=Automatic \
+            PROVISIONING_PROFILE_SPECIFIER="" \
+            PROVISIONING_PROFILE="" \
             -allowProvisioningUpdates \
             clean archive
 
