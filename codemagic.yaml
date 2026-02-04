@@ -32,8 +32,6 @@ workflows:
     environment:
       node: 20
       xcode: latest
-      vars:
-        CM_IOS_PROVISIONING_PROFILE_SPECIFIER: "HerMoodMap_AppStore"
 
     scripts:
       - name: Install dependencies
@@ -47,15 +45,24 @@ workflows:
           npx cap add ios || true
           npx cap sync ios
 
+      - name: Install signing assets (cert + profile) into keychain
+        script: |
+          # Creates/uses Codemagic keychain for this build
+          keychain initialize
+
+          # Pulls the correct signing files from Apple based on your connected credentials
+          # and installs them into the keychain + provisioning profiles directory.
+          app-store-connect fetch-signing-files "com.damsstudio.hermoodmap" \
+            --type IOS_APP_STORE \
+            --create
+
       - name: Build iOS archive + export IPA
         script: |
           set -e
           cd ios/App
 
-          if [ -z "$CM_IOS_PROVISIONING_PROFILE_SPECIFIER" ]; then
-            echo "ERROR: CM_IOS_PROVISIONING_PROFILE_SPECIFIER is empty."
-            exit 1
-          fi
+          # Ensure profile name is set for ExportOptions mapping
+          export CM_IOS_PROVISIONING_PROFILE_SPECIFIER="HerMoodMap_AppStore"
 
           xcodebuild \
             -workspace App.xcworkspace \
