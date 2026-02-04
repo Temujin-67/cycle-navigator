@@ -24,3 +24,29 @@ workflows:
 
     artifacts:
       - android/app/build/outputs/apk/debug/*.apk
+
+  ios-release:
+    name: iOS Release (IPA)
+    max_build_duration: 60
+
+    environment:
+      node: 20
+      xcode: latest
+
+    scripts:
+      - name: Install dependencies
+        script: npm ci
+
+      - name: Build web
+        script: npm run build
+
+      - name: Capacitor sync (iOS)
+        script: npx cap sync ios
+
+      - name: Build iOS archive + export IPA
+        script: |
+          cd ios/App
+          xcodebuild \
+            -workspace App.xcworkspace \
+            -scheme App \
+            -configuration Relea
