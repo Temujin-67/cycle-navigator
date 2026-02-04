@@ -25,7 +25,6 @@ workflows:
     artifacts:
       - android/app/build/outputs/apk/debug/*.apk
 
-
   ios-release:
     name: iOS Release (IPA)
     max_build_duration: 60
@@ -33,10 +32,6 @@ workflows:
     environment:
       node: 20
       xcode: latest
-
-      vars:
-        # Signing (used by ExportOptions.plist mapping)
-        CM_IOS_PROVISIONING_PROFILE_SPECIFIER: "HerMoodMap_AppStore"
 
     scripts:
       - name: Install dependencies
@@ -66,7 +61,10 @@ workflows:
             -scheme App \
             -configuration Release \
             -sdk iphoneos \
+            -destination "generic/platform=iOS" \
             -archivePath "$CM_BUILD_DIR/build/App.xcarchive" \
+            DEVELOPMENT_TEAM=KX8Z996CGK \
+            CODE_SIGN_STYLE=Automatic \
             clean archive
 
           xcodebuild \
