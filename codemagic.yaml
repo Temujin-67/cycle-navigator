@@ -48,13 +48,17 @@ workflows:
       - name: Build iOS archive + export IPA
         script: |
           cd ios/App
-          xcodebuild \
-            -workspace App.xcworkspace \
-            -scheme App \
-            -configuration Release \
-            -sdk iphoneos \
-            -archivePath $CM_BUILD_DIR/build/App.xcarchive \
-            clean archive
+        xcodebuild \
+  -workspace App.xcworkspace \
+  -scheme App \
+  -configuration Release \
+  -sdk iphoneos \
+  -archivePath $CM_BUILD_DIR/build/App.xcarchive \
+  -allowProvisioningUpdates \
+  DEVELOPMENT_TEAM=KX8Z996CGK \
+  CODE_SIGN_STYLE=Automatic \
+  clean archive
+
 
           xcodebuild \
             -exportArchive \
@@ -65,3 +69,4 @@ workflows:
     artifacts:
       - build/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
+
