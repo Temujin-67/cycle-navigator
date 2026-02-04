@@ -35,22 +35,7 @@ workflows:
       xcode: latest
 
       vars:
-        # ===============================
-        # App Store Connect API (REQUIRED)
-        # ===============================
-        APP_STORE_CONNECT_ISSUER_ID: "d41f4474-50aa-4066-8a54-7783f9bbbd30"
-        APP_STORE_CONNECT_KEY_IDENTIFIER: "23ZHGHPCV6"
-        APP_STORE_CONNECT_PRIVATE_KEY: |
-          -----BEGIN PRIVATE KEY-----
-          MIGTAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBHkwdwIBAQQgeVi4B/JO7jDgPHNP
-          WpiEcuo8SAMFENUqB4nZ9B3MCbmgCgYIKoZIzj0DAQehRANCAAQVJcT6bQt1R6HQ
-          NLs34S0mFr9YFuEviNCWC9RAIrMvwsbHjLP/eNuMu0ZlpvNgCFKPAga857t73cXG
-          UYUeITQ8
-          -----END PRIVATE KEY-----
-
-        # ===============================
-        # Signing
-        # ===============================
+        # Signing (used by ExportOptions.plist mapping)
         CM_IOS_PROVISIONING_PROFILE_SPECIFIER: "HerMoodMap_AppStore"
 
     scripts:
@@ -65,15 +50,13 @@ workflows:
           npx cap add ios || true
           npx cap sync ios
 
-      - name: Install signing assets
+      - name: Install signing assets from Codemagic (P12 + profiles)
         script: |
           keychain initialize
+          keychain add-certificates
+          xcode-project use-profiles
 
-          app-store-connect fetch-signing-files com.damsstudio.hermoodmap \
-            --type IOS_APP_STORE \
-            --create
-
-      - name: Build iOS archive
+      - name: Build iOS archive + export IPA
         script: |
           set -e
           cd ios/App
@@ -84,15 +67,8 @@ workflows:
             -configuration Release \
             -sdk iphoneos \
             -archivePath "$CM_BUILD_DIR/build/App.xcarchive" \
-            DEVELOPMENT_TEAM=KX8Z996CGK \
-            CODE_SIGN_STYLE=Manual \
-            CODE_SIGN_IDENTITY="Apple Distribution" \
-            PROVISIONING_PROFILE_SPECIFIER="HerMoodMap_AppStore" \
-            CODE_SIGNING_ALLOWED=NO \
             clean archive
 
-      - name: Export IPA
-        script: |
           xcodebuild \
             -exportArchive \
             -archivePath "$CM_BUILD_DIR/build/App.xcarchive" \
@@ -102,4 +78,3 @@ workflows:
     artifacts:
       - build/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
-
