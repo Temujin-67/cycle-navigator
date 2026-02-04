@@ -32,6 +32,8 @@ workflows:
     environment:
       node: 20
       xcode: latest
+      groups:
+        - ios-signing
 
     scripts:
       - name: Install dependencies
@@ -50,13 +52,11 @@ workflows:
           set -e
           cd ios/App
 
-          # Hard fail early if the profile name env var is missing
           if [ -z "$CM_IOS_PROVISIONING_PROFILE_SPECIFIER" ]; then
             echo "ERROR: CM_IOS_PROVISIONING_PROFILE_SPECIFIER is empty. Set it in Codemagic Environment variables."
             exit 1
           fi
 
-          # Archive (manual App Store signing for the app, NO signing for Pods)
           xcodebuild \
             -workspace App.xcworkspace \
             -scheme App \
@@ -70,7 +70,6 @@ workflows:
             CODE_SIGNING_ALLOWED=NO \
             clean archive
 
-          # Export IPA
           xcodebuild \
             -exportArchive \
             -archivePath "$CM_BUILD_DIR/build/App.xcarchive" \
