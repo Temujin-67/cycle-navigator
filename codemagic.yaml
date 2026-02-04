@@ -33,7 +33,7 @@ workflows:
       node: 20
       xcode: latest
 
-      # ✅ THIS makes Codemagic mount your uploaded .p12 + provisioning profile into the build VM
+      # This mounts your uploaded Apple Distribution cert + App Store profile into the build VM
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.damsstudios.hermoodmap
@@ -85,4 +85,3 @@ workflows:
     artifacts:
       - build/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
-
