@@ -35,7 +35,6 @@ workflows:
       vars:
         APP_BUNDLE_ID: "com.damsstudio.hermoodmap"
         APP_TEAM_ID: "KX8Z996CGK"
-        APP_STORE_PROFILE_NAME: "HerMoodMap_AppStore"
 
     scripts:
       - name: Install dependencies
@@ -55,12 +54,44 @@ workflows:
           keychain add-certificates
           xcode-project use-profiles
 
+      - name: Resolve installed provisioning profile UUID
+        script: |
+          set -e
+
+          PROFILES_DIR="$HOME/Library/MobileDevice/Provisioning Profiles"
+          echo "Listing provisioning profiles in: $PROFILES_DIR"
+          ls -la "$PROFILES_DIR" || true
+
+          UUID=""
+          for f in "$PROFILES_DIR"/*.mobileprovision; do
+            [ -f "$f" ] || continue
+            # Decode the mobileprovision (it’s a CMS blob) and grep for the bundle id
+            if security cms -D -i "$f" | /usr/bin/plutil -convert json -o - - | grep -q "\"application-identifier\".*$APP_TEAM_ID\.$APP_BUNDLE_ID"; then
+              UUID="$(basename "$f" .mobileprovision)"
+              echo "Matched profile file: $f"
+              echo "Resolved PROVISIONING_PROFILE_SPECIFIER UUID: $UUID"
+              break
+            fi
+          done
+
+          if [ -z "$UUID" ]; then
+            echo "ERROR: Could not find an installed provisioning profile matching $APP_TEAM_ID.$APP_BUNDLE_ID"
+            echo "Dumping decoded profile summaries for debugging:"
+            for f in "$PROFILES_DIR"/*.mobileprovision; do
+              [ -f "$f" ] || continue
+              echo "---- $f ----"
+              security cms -D -i "$f" | /usr/bin/plutil -p - | head -n 80 || true
+            done
+            exit 1
+          fi
+
+          echo "PROVISIONING_PROFILE_UUID=$UUID" >> "$CM_ENV"
+
       - name: Build iOS archive + export IPA
         script: |
           set -e
           cd ios/App
 
-          # Force archive signing to use the uploaded App Store profile (not Development)
           xcodebuild \
             -workspace App.xcworkspace \
             -scheme App \
@@ -71,7 +102,7 @@ workflows:
             DEVELOPMENT_TEAM="$APP_TEAM_ID" \
             CODE_SIGN_STYLE=Manual \
             CODE_SIGN_IDENTITY="Apple Distribution" \
-            PROVISIONING_PROFILE_SPECIFIER="$APP_STORE_PROFILE_NAME" \
+            PROVISIONING_PROFILE_SPECIFIER="$PROVISIONING_PROFILE_UUID" \
             clean archive
 
           xcodebuild \
