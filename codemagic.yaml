@@ -32,6 +32,10 @@ workflows:
     environment:
       node: 20
       xcode: latest
+      vars:
+        APP_BUNDLE_ID: "com.damsstudio.hermoodmap"
+        APP_TEAM_ID: "KX8Z996CGK"
+        APP_STORE_PROFILE_NAME: "HerMoodMap_AppStore"
 
     scripts:
       - name: Install dependencies
@@ -56,6 +60,7 @@ workflows:
           set -e
           cd ios/App
 
+          # Force archive signing to use the uploaded App Store profile (not Development)
           xcodebuild \
             -workspace App.xcworkspace \
             -scheme App \
@@ -63,8 +68,10 @@ workflows:
             -sdk iphoneos \
             -destination "generic/platform=iOS" \
             -archivePath "$CM_BUILD_DIR/build/App.xcarchive" \
-            DEVELOPMENT_TEAM=KX8Z996CGK \
-            CODE_SIGN_STYLE=Automatic \
+            DEVELOPMENT_TEAM="$APP_TEAM_ID" \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            PROVISIONING_PROFILE_SPECIFIER="$APP_STORE_PROFILE_NAME" \
             clean archive
 
           xcodebuild \
