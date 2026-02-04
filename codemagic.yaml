@@ -25,18 +25,13 @@ workflows:
     artifacts:
       - android/app/build/outputs/apk/debug/*.apk
 
-    ios-release:
+  ios-release:
     name: iOS Release (IPA)
     max_build_duration: 60
 
     environment:
       node: 20
       xcode: latest
-
-    ios_signing:
-      distribution_type: app_store
-      bundle_identifier: com.damsstudio.hermoodmap
-
 
     scripts:
       - name: Install dependencies
@@ -70,4 +65,3 @@ workflows:
     artifacts:
       - build/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
-
