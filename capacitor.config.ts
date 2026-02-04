@@ -7,7 +7,7 @@
 import type { CapacitorConfig } from "@capacitor/cli";
 
 const config: CapacitorConfig = {
-  appId: "com.damsstudios.cycleforecast",
+  appId: "com.damsstudio.hermoodmap",
   appName: "Cycle Forecast",
   webDir: "out",
   bundledWebRuntime: false,
