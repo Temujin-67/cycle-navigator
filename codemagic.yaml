@@ -33,11 +33,6 @@ workflows:
       node: 20
       xcode: latest
 
-      # IMPORTANT: use Codemagic "Provisioning profiles" UI
-      # and set this env var in Codemagic (not in git):
-      # CM_IOS_PROVISIONING_PROFILE_SPECIFIER = <Your App Store profile name>
-      # Example: "Her Mood Map AppStore"
-
     scripts:
       - name: Install dependencies
         script: npm ci
@@ -55,7 +50,13 @@ workflows:
           set -e
           cd ios/App
 
-          # Manual signing (App Store). This avoids "No Accounts" and avoids looking for DEV profiles.
+          # Hard fail early if the profile name env var is missing
+          if [ -z "$CM_IOS_PROVISIONING_PROFILE_SPECIFIER" ]; then
+            echo "ERROR: CM_IOS_PROVISIONING_PROFILE_SPECIFIER is empty. Set it in Codemagic Environment variables."
+            exit 1
+          fi
+
+          # Archive (manual App Store signing for the app, NO signing for Pods)
           xcodebuild \
             -workspace App.xcworkspace \
             -scheme App \
@@ -66,8 +67,10 @@ workflows:
             CODE_SIGN_STYLE=Manual \
             CODE_SIGN_IDENTITY="Apple Distribution" \
             PROVISIONING_PROFILE_SPECIFIER="$CM_IOS_PROVISIONING_PROFILE_SPECIFIER" \
+            CODE_SIGNING_ALLOWED=NO \
             clean archive
 
+          # Export IPA
           xcodebuild \
             -exportArchive \
             -archivePath "$CM_BUILD_DIR/build/App.xcarchive" \
