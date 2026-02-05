@@ -1,3 +1,6 @@
+# CHANGED LINES:
+# - ios-release.environment.vars.APP_PROFILE_NAME: "HerMoodMap_AppStore" -> "appstore-profile"
+
 workflows:
   android-debug:
     name: Android Debug APK
@@ -40,7 +43,7 @@ workflows:
       vars:
         APP_TEAM_ID: "KX8Z996CGK"
         APP_BUNDLE_ID: "com.damsstudios.hermoodmap"
-        APP_PROFILE_NAME: "HerMoodMap_AppStore"
+        APP_PROFILE_NAME: "appstore-profile"
 
     scripts:
       - name: Install dependencies
