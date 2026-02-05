@@ -1,3 +1,7 @@
+# CHANGED LINES:
+# - ios-release: added publishing.app_store_connect block so the IPA is uploaded to TestFlight/App Store Connect
+#   (right now you only publish artifacts to Codemagic, which is why TestFlight shows “No Builds”)
+
 workflows:
   android-debug:
     name: Android Debug APK
@@ -82,3 +86,8 @@ workflows:
       - ios/App/build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
 
+    publishing:
+      app_store_connect:
+        api_key: $APP_STORE_CONNECT_API_KEY
+        key_id: $APP_STORE_CONNECT_KEY_ID
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
