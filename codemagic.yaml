@@ -1,11 +1,7 @@
-# CHANGED LINES:
-# - ios-release: added publishing.app_store_connect block so the IPA is uploaded to TestFlight/App Store Connect
-#   (right now you only publish artifacts to Codemagic, which is why TestFlight shows “No Builds”)
-
 workflows:
   android-debug:
     name: Android Debug APK
-    max_build_duration: 60 
+    max_build_duration: 60
 
     environment:
       node: 20
@@ -37,7 +33,6 @@ workflows:
       node: 20
       xcode: latest
 
-      # Use Codemagic managed signing assets (NOT manual xcodebuild flags)
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.damsstudios.hermoodmap
@@ -47,7 +42,6 @@ workflows:
         XCODE_WORKSPACE: "App.xcworkspace"
         XCODE_SCHEME: "App"
 
-        # CHANGE THESE TWO to match what you see in Codemagic -> Code signing identities
         PROFILE_REFERENCE: "appstore-profile"
         CERT_REFERENCE: "apple-distribution"
 
@@ -63,17 +57,14 @@ workflows:
           npx cap add ios || true
           npx cap sync ios
 
-      # Pull the signing files you stored in Codemagic into the build machine
       - name: Install signing assets into keychain
         script: |
           keychain initialize
           keychain add-certificates
 
-      # Apply the installed provisioning profiles to the Xcode project
       - name: Apply provisioning profiles to Xcode project
         script: xcode-project use-profiles
 
-      # Build IPA using Codemagic tooling (avoids your manual specifier issue)
       - name: Build IPA for App Store
         script: |
           cd ios/App
@@ -86,11 +77,8 @@ workflows:
       - ios/App/build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
 
-        publishing:
+    publishing:
       app_store_connect:
         api_key: $APP_STORE_CONNECT_API_KEY
         key_id: $APP_STORE_CONNECT_KEY_ID
         issuer_id: $APP_STORE_CONNECT_ISSUER_ID
-
-
-
