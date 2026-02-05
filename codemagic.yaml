@@ -33,6 +33,9 @@ workflows:
       node: 20
       xcode: latest
 
+      groups:
+        - appstore
+
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.damsstudios.hermoodmap
@@ -79,6 +82,7 @@ workflows:
 
     publishing:
       app_store_connect:
-        api_key: $APP_STORE_CONNECT_API_KEY
-        key_id: $APP_STORE_CONNECT_KEY_ID
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
         issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+        submit_to_testflight: true
