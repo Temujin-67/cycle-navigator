@@ -86,9 +86,11 @@ workflows:
       - ios/App/build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
 
-    publishing:
+        publishing:
       app_store_connect:
         api_key: $APP_STORE_CONNECT_API_KEY
         key_id: $APP_STORE_CONNECT_KEY_ID
         issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+
+
 
