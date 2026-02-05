@@ -1,6 +1,6 @@
 # CHANGED LINES:
-# - ios-release.environment: added `groups: [appstore]` so publishing sees the env vars
-# - ios-release.scripts: added "Fix App Store Connect private key formatting" as the LAST script (right before publishing)
+# - ios-release.environment: REMOVED `groups: - appstore` (your Codemagic account doesn’t have that group)
+# - ios-release.scripts: ADDED "Fix App Store Connect private key formatting" (uses your existing env var)
 # - ios-release.publishing.app_store_connect: uses APP_STORE_CONNECT_PUBLISHER_PRIVATE_KEY (runtime-fixed) + submit_to_testflight
 
 workflows:
@@ -37,9 +37,6 @@ workflows:
     environment:
       node: 20
       xcode: latest
-
-      groups:
-        - appstore
 
       ios_signing:
         distribution_type: app_store
