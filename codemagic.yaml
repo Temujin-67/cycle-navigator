@@ -45,7 +45,7 @@ workflows:
 
         # CHANGE THESE TWO to match what you see in Codemagic -> Code signing identities
         PROFILE_REFERENCE: "appstore-profile"
-        CERT_REFERENCE: "YOUR_CERT_REFERENCE_NAME_HERE"
+        CERT_REFERENCE: "apple-distribution"
 
     scripts:
       - name: Install dependencies
@@ -81,3 +81,4 @@ workflows:
     artifacts:
       - ios/App/build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
+
