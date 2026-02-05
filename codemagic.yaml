@@ -1,6 +1,3 @@
-# CHANGED LINES:
-# - ios-release.environment.vars.APP_PROFILE_NAME: "HerMoodMap_AppStore" -> "appstore-profile"
-
 workflows:
   android-debug:
     name: Android Debug APK
@@ -36,14 +33,19 @@ workflows:
       node: 20
       xcode: latest
 
+      # Use Codemagic managed signing assets (NOT manual xcodebuild flags)
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.damsstudios.hermoodmap
 
       vars:
         APP_TEAM_ID: "KX8Z996CGK"
-        APP_BUNDLE_ID: "com.damsstudios.hermoodmap"
-        APP_PROFILE_NAME: "appstore-profile"
+        XCODE_WORKSPACE: "App.xcworkspace"
+        XCODE_SCHEME: "App"
+
+        # CHANGE THESE TWO to match what you see in Codemagic -> Code signing identities
+        PROFILE_REFERENCE: "appstore-profile"
+        CERT_REFERENCE: "YOUR_CERT_REFERENCE_NAME_HERE"
 
     scripts:
       - name: Install dependencies
@@ -57,36 +59,25 @@ workflows:
           npx cap add ios || true
           npx cap sync ios
 
-      - name: Install signing assets (cert + profile) into keychain
+      # Pull the signing files you stored in Codemagic into the build machine
+      - name: Install signing assets into keychain
         script: |
           keychain initialize
           keychain add-certificates
-          xcode-project use-profiles
 
-      - name: Build iOS archive + export IPA (MANUAL App Store signing)
+      # Apply the installed provisioning profiles to the Xcode project
+      - name: Apply provisioning profiles to Xcode project
+        script: xcode-project use-profiles
+
+      # Build IPA using Codemagic tooling (avoids your manual specifier issue)
+      - name: Build IPA for App Store
         script: |
-          set -e
           cd ios/App
-
-          xcodebuild \
-            -workspace App.xcworkspace \
-            -scheme App \
-            -configuration Release \
-            -sdk iphoneos \
-            -destination "generic/platform=iOS" \
-            -archivePath "$CM_BUILD_DIR/build/App.xcarchive" \
-            DEVELOPMENT_TEAM="$APP_TEAM_ID" \
-            CODE_SIGN_STYLE=Manual \
-            CODE_SIGN_IDENTITY="Apple Distribution" \
-            PROVISIONING_PROFILE_SPECIFIER="$APP_PROFILE_NAME" \
-            clean archive
-
-          xcodebuild \
-            -exportArchive \
-            -archivePath "$CM_BUILD_DIR/build/App.xcarchive" \
-            -exportOptionsPlist "$CM_BUILD_DIR/ExportOptions.plist" \
-            -exportPath "$CM_BUILD_DIR/build/ipa"
+          xcode-project build-ipa \
+            --workspace "$XCODE_WORKSPACE" \
+            --scheme "$XCODE_SCHEME" \
+            --archive-flags="-destination 'generic/platform=iOS'"
 
     artifacts:
-      - build/ipa/*.ipa
+      - ios/App/build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
