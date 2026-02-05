@@ -1,7 +1,10 @@
 # CHANGED LINES:
-# - ios-release.environment: REMOVED `groups: - appstore` (your Codemagic account doesn’t have that group)
-# - ios-release.scripts: ADDED "Fix App Store Connect private key formatting" (uses your existing env var)
-# - ios-release.publishing.app_store_connect: uses APP_STORE_CONNECT_PUBLISHER_PRIVATE_KEY (runtime-fixed) + submit_to_testflight
+# - ios-release.scripts: replaced "Fix App Store Connect private key formatting" with a robust version that:
+#   1) reads APP_STORE_CONNECT_PUBLISHER_PRIVATE_KEY_ESCAPED
+#   2) converts literal "\n" into real newlines
+#   3) rewrites BEGIN/END lines safely
+#   4) validates key parses as PEM (base64 body only)
+#   5) exports APP_STORE_CONNECT_PUBLISHER_PRIVATE_KEY for the publisher
 
 workflows:
   android-debug:
@@ -78,17 +81,57 @@ workflows:
             --scheme "$XCODE_SCHEME" \
             --archive-flags="-destination 'generic/platform=iOS'"
 
-      - name: Fix App Store Connect private key formatting
+      - name: Fix App Store Connect private key formatting (validate PEM)
         script: |
           python3 - << 'PY'
-          import os
-          v = os.environ.get("APP_STORE_CONNECT_PUBLISHER_PRIVATE_KEY_ESCAPED", "")
-          v = v.replace("\\n", "\n")
-          print("Key header ok:", v.startswith("-----BEGIN PRIVATE KEY-----") or v.startswith("-----BEGIN EC PRIVATE KEY-----"))
-          with open("/tmp/asc_key.p8", "w") as f:
-            f.write(v)
+          import os, re, base64, sys
+
+          raw = os.environ.get("APP_STORE_CONNECT_PUBLISHER_PRIVATE_KEY_ESCAPED", "")
+          if not raw:
+            print("ERROR: APP_STORE_CONNECT_PUBLISHER_PRIVATE_KEY_ESCAPED is empty")
+            sys.exit(1)
+
+          # Turn literal backslash-n into real newlines
+          v = raw.replace("\\r\\n", "\n").replace("\\n", "\n").strip()
+
+          # Normalise header/footer lines (Codemagic tool accepts PKCS8 "PRIVATE KEY")
+          # Keep EC PRIVATE KEY if that's what it is.
+          header_ok = v.startswith("-----BEGIN PRIVATE KEY-----") or v.startswith("-----BEGIN EC PRIVATE KEY-----")
+          if not header_ok:
+            print("ERROR: Key does not start with a recognised PEM header")
+            print("Starts with:", v[:40].replace("\n", "\\n"))
+            sys.exit(1)
+
+          # Validate body is base64 (strip header/footer + whitespace)
+          body = re.sub(r"-----BEGIN [^-]+-----", "", v)
+          body = re.sub(r"-----END [^-]+-----", "", body)
+          body = re.sub(r"\s+", "", body)
+
+          if len(body) < 100:
+            print("ERROR: PEM body looks too short")
+            sys.exit(1)
+
+          try:
+            base64.b64decode(body, validate=True)
+          except Exception as e:
+            print("ERROR: PEM body is not valid base64:", e)
+            sys.exit(1)
+
+          # Write the exact PEM to a temp file and export cleanly
+          path = "/tmp/asc_key.p8"
+          with open(path, "w", newline="\n") as f:
+            f.write(v if v.endswith("\n") else v + "\n")
+
+          print("PEM OK. Header:", "PRIVATE KEY" if "BEGIN PRIVATE KEY" in v.splitlines()[0] else "EC PRIVATE KEY")
+          print("Wrote:", path)
           PY
-          export APP_STORE_CONNECT_PUBLISHER_PRIVATE_KEY="$(cat /tmp/asc_key.p8)"
+
+          # IMPORTANT: export the exact content with real newlines
+          export APP_STORE_CONNECT_PUBLISHER_PRIVATE_KEY="$(python3 - << 'PY'
+          with open("/tmp/asc_key.p8", "r") as f:
+            print(f.read(), end="")
+          PY
+          )"
 
     artifacts:
       - ios/App/build/ios/ipa/*.ipa
