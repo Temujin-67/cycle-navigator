@@ -1,7 +1,6 @@
 # CHANGED LINES:
-# - ios-release.scripts: added "Map ASC vars to Codemagic expected names (persist)" to write:
-#   APP_STORE_CONNECT_PRIVATE_KEY / APP_STORE_CONNECT_KEY_IDENTIFIER / APP_STORE_CONNECT_ISSUER_ID into $CM_ENV
-# - ios-release.publishing.app_store_connect: switched to Codemagic’s expected env var names
+# - ios-release: REMOVED the entire `publishing:` block to stop forcing env-based private key.
+#   This allows Codemagic’s App Store Connect integration (uploaded .p8 file) to be used.
 
 workflows:
   android-debug:
@@ -78,58 +77,6 @@ workflows:
             --scheme "$XCODE_SCHEME" \
             --archive-flags="-destination 'generic/platform=iOS'"
 
-      - name: Map ASC vars to Codemagic expected names (persist)
-        script: |
-          python3 - << 'PY'
-          import os, re, base64, sys
-
-          raw = os.environ.get("APP_STORE_CONNECT_PUBLISHER_PRIVATE_KEY_ESCAPED", "") or os.environ.get("APP_STORE_CONNECT_API_KEY", "")
-          if not raw:
-            print("ERROR: Missing APP_STORE_CONNECT_PUBLISHER_PRIVATE_KEY_ESCAPED and APP_STORE_CONNECT_API_KEY")
-            sys.exit(1)
-
-          # Convert literal "\n" sequences to real newlines, trim
-          v = raw.replace("\\r\\n", "\n").replace("\\n", "\n").strip()
-
-          # Must be a PEM key (Apple .p8 is usually PKCS8: BEGIN PRIVATE KEY)
-          if not (v.startswith("-----BEGIN PRIVATE KEY-----") or v.startswith("-----BEGIN EC PRIVATE KEY-----")):
-            print("ERROR: Not a recognised PEM header. Starts with:", v[:40].replace("\n", "\\n"))
-            sys.exit(1)
-
-          # Validate base64 body
-          body = re.sub(r"-----BEGIN [^-]+-----", "", v)
-          body = re.sub(r"-----END [^-]+-----", "", body)
-          body = re.sub(r"\s+", "", body)
-          try:
-            base64.b64decode(body, validate=True)
-          except Exception as e:
-            print("ERROR: PEM body invalid base64:", e)
-            sys.exit(1)
-
-          # Write clean PEM with LF endings
-          path = "/tmp/asc_private_key.p8"
-          with open(path, "w", newline="\n") as f:
-            f.write(v if v.endswith("\n") else v + "\n")
-
-          print("PEM OK. Wrote:", path)
-          PY
-
-          # Persist EXACT values under the variable names Codemagic expects for publishing
-          {
-            echo "APP_STORE_CONNECT_KEY_IDENTIFIER=$APP_STORE_CONNECT_KEY_ID"
-            echo "APP_STORE_CONNECT_ISSUER_ID=$APP_STORE_CONNECT_ISSUER_ID"
-            echo 'APP_STORE_CONNECT_PRIVATE_KEY<<EOF'
-            cat /tmp/asc_private_key.p8
-            echo 'EOF'
-          } >> "$CM_ENV"
-
     artifacts:
       - ios/App/build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
-
-    publishing:
-      app_store_connect:
-        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
-        key_id: $APP_STORE_CONNECT_KEY_IDENTIFIER
-        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
-        submit_to_testflight: true
