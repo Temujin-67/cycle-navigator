@@ -1,5 +1,5 @@
 # CHANGED LINES:
-# - ios-release.publishing.app_store_connect: added `auth: integration` and fixed `submit_to_testflight` to be a boolean
+# - ios-release: ADDED `integrations.app_store_connect: true` (required for `auth: integration`)
 
 workflows:
   android-debug:
@@ -31,6 +31,9 @@ workflows:
   ios-release:
     name: iOS Release (IPA)
     max_build_duration: 60
+
+    integrations:
+      app_store_connect: true
 
     environment:
       node: 20
