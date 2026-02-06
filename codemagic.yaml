@@ -1,6 +1,5 @@
 # CHANGED LINES:
-# - ios-release: ADDED `publishing.app_store_connect.submit_to_testflight: true`
-#   (no keys/env vars in YAML; uses Codemagic App Store Connect integration with uploaded .p8)
+# - ios-release.publishing.app_store_connect: added `auth: integration` and fixed `submit_to_testflight` to be a boolean
 
 workflows:
   android-debug:
@@ -83,4 +82,5 @@ workflows:
 
     publishing:
       app_store_connect:
+        auth: integration
         submit_to_testflight: true
