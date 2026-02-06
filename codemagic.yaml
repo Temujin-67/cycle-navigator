@@ -1,6 +1,6 @@
 # CHANGED LINES:
-# - ios-release: REMOVED the entire `publishing:` block to stop forcing env-based private key.
-#   This allows Codemagic’s App Store Connect integration (uploaded .p8 file) to be used.
+# - ios-release: ADDED `publishing.app_store_connect.submit_to_testflight: true`
+#   (no keys/env vars in YAML; uses Codemagic App Store Connect integration with uploaded .p8)
 
 workflows:
   android-debug:
@@ -80,3 +80,7 @@ workflows:
     artifacts:
       - ios/App/build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
+
+    publishing:
+      app_store_connect:
+        submit_to_testflight: true
