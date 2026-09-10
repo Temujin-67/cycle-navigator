@@ -1,6 +1,8 @@
 # CHANGED LINES:
 # - ios-release.scripts: ADDED "Prepare App Store Connect key file for publishing" (copies uploaded AuthKey_*.p8 to /tmp/asc_key.p8 and persists ASC_KEY_PATH via $CM_ENV)
 # - ios-release.publishing.app_store_connect: CHANGED api_key to use "@file:$ASC_KEY_PATH" (file-based key, no PEM-in-env)
+# - android-debug.scripts: ADDED "Generate app icons" step (uses resources/icon.png via @capacitor/assets)
+# - ios-release.scripts: ADDED "Generate app icons" step (uses resources/icon.png via @capacitor/assets)
 
 workflows:
   android-debug:
@@ -16,6 +18,9 @@ workflows:
 
       - name: Build web
         script: npm run build
+
+      - name: Generate app icons
+        script: npx --yes @capacitor/assets generate --android
 
       - name: Capacitor sync (Android)
         script: npx cap sync android
@@ -60,6 +65,9 @@ workflows:
         script: |
           npx cap add ios || true
           npx cap sync ios
+
+      - name: Generate app icons
+        script: npx --yes @capacitor/assets generate --ios
 
       - name: Install signing assets into keychain
         script: |
