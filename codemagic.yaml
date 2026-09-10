@@ -1,8 +1,8 @@
 # CHANGED LINES:
-# - ios-release.scripts: ADDED "Prepare App Store Connect key file for publishing" (copies uploaded AuthKey_*.p8 to /tmp/asc_key.p8 and persists ASC_KEY_PATH via $CM_ENV)
-# - ios-release.publishing.app_store_connect: CHANGED api_key to use "@file:$ASC_KEY_PATH" (file-based key, no PEM-in-env)
 # - android-debug.scripts: ADDED "Generate app icons" step (uses resources/icon.png via @capacitor/assets)
 # - ios-release.scripts: ADDED "Generate app icons" step (uses resources/icon.png via @capacitor/assets)
+# - ios-release.scripts: REMOVED "Prepare App Store Connect key file for publishing" workaround step
+# - ios-release.publishing.app_store_connect: CHANGED to use standard env vars (APP_STORE_CONNECT_PRIVATE_KEY / KEY_ID / ISSUER_ID)
 
 workflows:
   android-debug:
@@ -54,6 +54,9 @@ workflows:
         PROFILE_REFERENCE: "appstore-profile"
         CERT_REFERENCE: "apple-distribution"
 
+      groups:
+        - applestore
+
     scripts:
       - name: Install dependencies
         script: npm ci
@@ -85,34 +88,13 @@ workflows:
             --scheme "$XCODE_SCHEME" \
             --archive-flags="-destination 'generic/platform=iOS'"
 
-      - name: Prepare App Store Connect key file for publishing
-        script: |
-          set -e
-
-          # Find the uploaded .p8 (Codemagic "secure file" / uploaded file) anywhere under the build dir.
-          KEY_FILE="$(find "$CM_BUILD_DIR" -maxdepth 10 -name "AuthKey_*.p8" -print | head -n 1 || true)"
-
-          if [ -z "$KEY_FILE" ]; then
-            echo "ERROR: Could not find AuthKey_*.p8 under $CM_BUILD_DIR"
-            echo "Make sure you uploaded AuthKey_S64DRRXU53.p8 as a Codemagic file-based secret for this app."
-            exit 1
-          fi
-
-          cp "$KEY_FILE" /tmp/asc_key.p8
-
-          # Persist the path for the Publishing step
-          echo "ASC_KEY_PATH=/tmp/asc_key.p8" >> "$CM_ENV"
-
-          echo "Using ASC key file: $KEY_FILE"
-          ls -la /tmp/asc_key.p8
-
     artifacts:
       - ios/App/build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
 
     publishing:
       app_store_connect:
-        api_key: "@file:$ASC_KEY_PATH"
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
         key_id: $APP_STORE_CONNECT_KEY_ID
         issuer_id: $APP_STORE_CONNECT_ISSUER_ID
         submit_to_testflight: true
