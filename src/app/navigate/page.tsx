@@ -39,6 +39,8 @@ type DayInfo = {
 
   play: string; // replaces Focus + Helps
   avoid: string;
+
+  headline: string; // the one big line at the top of the day card
 };
 
 const DEFAULTS = {
@@ -189,6 +191,20 @@ function stressEmojiForPhase(phase: Phase): string {
 }
 
 // Field indices for unique forecast: 0=mood, 1=libido, 2=stress, 3=communication, 4=play, 5=avoid
+// One big line per day. Three per phase, rotated by day.
+const HEADLINES: Record<Phase, string[]> = {
+  Follicular: ["Good day to get things done.", "Green light. Use it.", "Smooth sailing, mostly."],
+  Ovulatory: ["Harder to piss her off today.", "Best day of the cycle to show up.", "Good day. Don't waste it."],
+  Menstrual: ["Short fuse today.", "Keep it simple today.", "Low patience. Stay out of the way."],
+  Luteal: ["Keep it tidy today.", "No surprises today.", "Patience is running low."],
+  PMS: ["No room for error.", "Walk carefully today.", "Eggshells day."],
+};
+
+function headlineFor(phase: Phase, dayIndex: number) {
+  const lines = HEADLINES[phase];
+  return lines[dayIndex % lines.length];
+}
+
 function copyFor(phase: Phase, dayIndex: number) {
   if (phase === "Follicular") {
     return {
@@ -271,7 +287,7 @@ function PhaseChip({ phase }: { phase: Phase }) {
     Follicular: { border: "#16A34A", emoji: "🌱" },
     Ovulatory: { border: "#F59E0B", emoji: "☀️" },
     Luteal: { border: "#2563EB", emoji: "🧠" },
-    PMS: { border: "#EF4444", emoji: "⚡" },
+    PMS: { border: "#EA580C", emoji: "⚡" },
   };
 
   const s = m[phase];
@@ -286,40 +302,12 @@ function PhaseChip({ phase }: { phase: Phase }) {
         border: `1px solid ${s.border}`,
         background: "var(--background)",
         color: "var(--foreground)",
-        fontSize: 12,
+        fontSize: 14,
         fontWeight: 900,
       }}
     >
       <span aria-hidden="true">{s.emoji}</span>
       {phase} phase
-    </span>
-  );
-}
-
-function RiskChip({ risk }: { risk: RiskLevel }) {
-  const m: Record<RiskLevel, { bg: string; fg: string; emoji: string }> = {
-    Low: { bg: "#E8FFF1", fg: "#0B6B45", emoji: "🟢" },
-    Medium: { bg: "#FFF6E5", fg: "#7A4B00", emoji: "🟠" },
-    High: { bg: "#FFECEC", fg: "#7F1D1D", emoji: "🔴" },
-  };
-  const s = m[risk];
-  return (
-    <span
-      style={{
-        display: "inline-flex",
-        gap: 8,
-        alignItems: "center",
-        padding: "7px 12px",
-        borderRadius: 999,
-        border: "1px solid rgba(0,0,0,0.08)",
-        background: s.bg,
-        color: s.fg,
-        fontSize: 12,
-        fontWeight: 900,
-      }}
-    >
-      <span aria-hidden="true">{s.emoji}</span>
-      Conflict risk: {risk}
     </span>
   );
 }
@@ -330,17 +318,39 @@ function DayCard({ d }: { d: DayInfo }) {
     Follicular: { bg: "#F1FFF5", border: "#16A34A" },
     Ovulatory: { bg: "#FFF7E6", border: "#F59E0B" },
     Luteal: { bg: "#EEF7FF", border: "#2563EB" },
-    PMS: { bg: "#FFECEC", border: "#EF4444" },
+    PMS: { bg: "#FFF1E8", border: "#EA580C" },
   };
 
   const ps = phaseBg[d.phase];
 
-  const row = (emoji: string, label: string, value: string) => (
-    <div style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
-      <div style={{ width: 26, textAlign: "center", fontSize: 16 }}>{emoji}</div>
+  // `warn` puts the row in its own white box with a red outline (used for "Avoid").
+  const row = (emoji: string, label: string, value: string, warn = false) => (
+    <div
+      style={{
+        display: "flex",
+        gap: 12,
+        alignItems: "flex-start",
+        ...(warn
+          ? { background: "#FFFFFF", border: "1.5px solid #FCA5A5", borderRadius: 12, padding: "10px 12px" }
+          : {}),
+      }}
+    >
+      <div style={{ width: 28, textAlign: "center", fontSize: 20 }}>{emoji}</div>
       <div style={{ flex: 1 }}>
-        <div style={{ fontSize: 12, fontWeight: 900, letterSpacing: 0.2, color: "var(--foreground)" }}>{label}</div>
-        <div style={{ fontSize: 15, lineHeight: 1.35, color: "var(--foreground)", marginTop: 2 }}>{value}</div>
+        <div style={{ fontSize: 14, fontWeight: 900, letterSpacing: 0.2, color: warn ? "#B91C1C" : "var(--foreground)" }}>
+          {label}
+        </div>
+        <div
+          style={{
+            fontSize: 17,
+            lineHeight: 1.35,
+            color: "#171717",
+            marginTop: 2,
+            fontWeight: warn ? 600 : 400,
+          }}
+        >
+          {value}
+        </div>
       </div>
     </div>
   );
@@ -364,16 +374,19 @@ function DayCard({ d }: { d: DayInfo }) {
 
       <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 12 }}>
         <PhaseChip phase={d.phase} />
-        <RiskChip risk={d.risk} />
       </div>
 
-      <div style={{ marginTop: 14, display: "grid", gap: 12 }}>
+      <div style={{ marginTop: 14, fontWeight: 800, fontSize: 30, lineHeight: 1.08, letterSpacing: -0.4, color: "#171717" }}>
+        {d.headline}
+      </div>
+
+      <div style={{ marginTop: 16, display: "grid", gap: 14 }}>
         {row(moodEmojiForPhase(d.phase), "Mood", d.mood)}
         {row(libidoEmojiForPhase(d.phase), "Libido", d.libido)}
         {row(stressEmojiForPhase(d.phase), "Stress", d.stress)}
         {row("💬", "Communication", d.communication)}
         {row("🎯", "Today", d.play)}
-        {row("🚫", "Avoid", d.avoid)}
+        {row("🚫", "Avoid", d.avoid, true)}
       </div>
 
       <div style={{ marginTop: 14, fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.35 }}>
@@ -448,7 +461,7 @@ function NavigateInner() {
     const phase = phaseForDay(dayIndex, bleedOverride, cycleLength);
     const risk = riskFor(phase);
     const c = copyFor(phase, dayIndex);
-    return { date, dayIndex, phase, risk, ...c };
+    return { date, dayIndex, phase, risk, headline: headlineFor(phase, dayIndex), ...c };
   };
 
   const current = useMemo(() => build(viewOffset), [viewOffset, bleedOverride, cycleLength]);
