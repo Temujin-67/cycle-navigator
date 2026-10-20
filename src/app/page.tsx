@@ -36,7 +36,6 @@ function HomePageContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [age, setAge] = useState("");
   const [day1, setDay1] = useState("");
   const [cycleLen, setCycleLen] = useState(String(DEFAULT_CYCLE_LENGTH));
 
@@ -49,14 +48,11 @@ function HomePageContent() {
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [onboardingStep, setOnboardingStep] = useState(1);
   const [onboardingDay1, setOnboardingDay1] = useState("");
-  const [onboardingAge, setOnboardingAge] = useState("");
 
   useEffect(() => {
     const qDay1 = searchParams.get("day1");
-    const qAge = searchParams.get("age");
     const qCl = searchParams.get("cl");
     if (qDay1) setDay1(qDay1);
-    if (qAge != null) setAge(qAge);
     if (qCl) setCycleLen(String(parseCycleLength(qCl)));
   }, [searchParams]);
 
@@ -113,9 +109,8 @@ function HomePageContent() {
     if (!day1) return;
     const cl = parseCycleLength(clRaw);
     const bd = parseBleedDays(bdRaw);
-    const a = age || "";
     saveSettings({ day1, cl, bd });
-    router.push(`/navigate?age=${encodeURIComponent(a)}&day1=${encodeURIComponent(day1)}&cl=${cl}&bd=${bd}`);
+    router.push(`/navigate?day1=${encodeURIComponent(day1)}&cl=${cl}&bd=${bd}`);
   }
 
   function finishOnboarding() {
@@ -126,7 +121,7 @@ function HomePageContent() {
     setShowOnboarding(false);
     saveSettings({ day1: onboardingDay1, cl: DEFAULT_CYCLE_LENGTH, bd: DEFAULT_BLEED_DAYS });
     router.push(
-      `/navigate?age=${encodeURIComponent(onboardingAge)}&day1=${encodeURIComponent(onboardingDay1)}&cl=${DEFAULT_CYCLE_LENGTH}&bd=${DEFAULT_BLEED_DAYS}`
+      `/navigate?day1=${encodeURIComponent(onboardingDay1)}&cl=${DEFAULT_CYCLE_LENGTH}&bd=${DEFAULT_BLEED_DAYS}`
     );
   }
 
@@ -222,25 +217,6 @@ function HomePageContent() {
                     marginBottom: "1rem",
                     fontSize: "1rem",
                     border: "2px solid var(--input-border)",
-                    borderRadius: 10,
-                    background: "var(--input-bg)",
-                    color: "var(--foreground)",
-                  }}
-                />
-                <label style={{ display: "block", fontSize: "0.9375rem", color: "var(--text-secondary)", marginBottom: "0.5rem" }}>
-                  Her age (optional)
-                </label>
-                <input
-                  type="number"
-                  value={onboardingAge}
-                  onChange={(e) => setOnboardingAge(e.target.value)}
-                  placeholder=""
-                  style={{
-                    width: "100%",
-                    padding: "0.75rem 0.875rem",
-                    marginBottom: "1rem",
-                    fontSize: "1rem",
-                    border: "1px solid var(--input-border)",
                     borderRadius: 10,
                     background: "var(--input-bg)",
                     color: "var(--foreground)",
@@ -373,34 +349,6 @@ function HomePageContent() {
           If her cycle is usually longer or shorter than {DEFAULT_CYCLE_LENGTH} days, set it here for a better estimate (
           {LIMITS.cycleLength.min}–{LIMITS.cycleLength.max}).
         </span>
-      </label>
-
-      <label style={{ display: "block", marginTop: "1.25rem", fontSize: "0.9375rem", fontWeight: 600 }}>
-        Her age (optional)
-        <input
-          type="number"
-          value={age}
-          onChange={(e) => setAge(e.target.value)}
-          style={{
-            width: "100%",
-            padding: "0.75rem 0.875rem",
-            marginTop: "0.375rem",
-            fontSize: "1rem",
-            border: "1px solid var(--input-border)",
-            borderRadius: 10,
-            background: "var(--input-bg)",
-            color: "var(--foreground)",
-            outline: "none",
-          }}
-          onFocus={(e) => {
-            e.currentTarget.style.borderColor = "var(--input-focus-border)";
-            e.currentTarget.style.boxShadow = "0 0 0 2px rgba(22, 163, 74, 0.2)";
-          }}
-          onBlur={(e) => {
-            e.currentTarget.style.borderColor = "var(--input-border)";
-            e.currentTarget.style.boxShadow = "none";
-          }}
-        />
       </label>
 
       <button

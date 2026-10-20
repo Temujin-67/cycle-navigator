@@ -409,7 +409,6 @@ function NavigateInner() {
   const sp = useSearchParams();
   const router = useRouter();
 
-  const age = sp.get("age") || "";
   const day1Str = sp.get("day1") || "";
   // Values from the address are always forced into the allowed range (cycle 21-35 days, period 1-10 days),
   // so a typo or an old link can never break the phase maths.
@@ -495,7 +494,7 @@ function NavigateInner() {
   // A week past her usual cycle length counts as overdue
   const isOverdueBanner = current.dayIndex >= cycleLength + 7;
 
-  const qpBase = `age=${encodeURIComponent(age)}&day1=${encodeURIComponent(day1Str)}&cl=${encodeURIComponent(String(cycleLength))}`;
+  const qpBase = `day1=${encodeURIComponent(day1Str)}&cl=${encodeURIComponent(String(cycleLength))}`;
 
   function extendBleedToCurrentDay() {
     // The period length is capped (see LIMITS). Past the cap, stop asking so the prompt can't loop.
@@ -540,7 +539,7 @@ function NavigateInner() {
       }
     } catch (_) {}
 
-    router.replace(`/navigate?age=${encodeURIComponent(age)}&day1=${encodeURIComponent(newDay1Str)}&bd=5&cl=${learnedCl}`);
+    router.replace(`/navigate?day1=${encodeURIComponent(newDay1Str)}&bd=5&cl=${learnedCl}`);
     router.refresh();
   }
 
@@ -803,7 +802,7 @@ function NavigateInner() {
                   </button>
 
                   <Link
-                    href={`/?day1=${encodeURIComponent(day1Str)}&age=${encodeURIComponent(age)}&cl=${cycleLength}`}
+                    href={`/?day1=${encodeURIComponent(day1Str)}&cl=${cycleLength}`}
                     style={{
                       display: "block",
                       padding: "10px 14px",
