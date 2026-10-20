@@ -402,6 +402,21 @@ function DayCard({ d }: { d: DayInfo }) {
   );
 }
 
+const settingsRowStyle: React.CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "center",
+  minHeight: 52,
+  padding: "12px 14px",
+  borderRadius: 12,
+  border: "1px solid var(--input-border)",
+  background: "var(--background)",
+  color: "var(--foreground)",
+  fontSize: 17,
+  fontWeight: 700,
+  textDecoration: "none",
+};
+
 function NavigateInner() {
   const sp = useSearchParams();
   const router = useRouter();
@@ -427,12 +442,7 @@ function NavigateInner() {
   }, [day1Str, cycleLength, bleedOverride]);
 
   const [dismissBleedPrompt, setDismissBleedPrompt] = useState(false);
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [quickRangesOpen, setQuickRangesOpen] = useState(false);
-
-  // NEW: fixed-position menu anchoring (prevents iOS left-clipping)
-  const menuBtnRef = useRef<HTMLButtonElement | null>(null);
-  const [menuPos, setMenuPos] = useState<{ left: number; top: number; width: number } | null>(null);
+  const [tab, setTab] = useState<"today" | "month" | "settings">("today");
 
   const day1 = useMemo(() => new Date(day1Str + "T12:00:00"), [day1Str]);
   const today = new Date();
@@ -485,12 +495,10 @@ function NavigateInner() {
     router.refresh();
   }
 
-  function startNewCycle() {
-    setMenuOpen(false);
-
-    // FIX: use the day you're viewing (current.date), not "today".
-    // Otherwise if you swipe ahead to Day 28+ quickly, the URL doesn't change on later cycles.
-    const d = current.date;
+  // `from` is the day the new cycle starts on. Default: the day being viewed (so swiping ahead to
+  // Day 28+ and tapping "new cycle" starts it there). The Settings tab passes today.
+  function startNewCycle(from: DayInfo = current) {
+    const d = from.date;
 
     const newDay1Str = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 
@@ -498,58 +506,13 @@ function NavigateInner() {
     // A mistaken tap on day 8 must not teach the app that her cycle is 8 days long.
     // The next cycle uses her average of the last few cycles (blended with the length she stated at first).
     let nextCl = cycleLength;
-    if (isRealCycleLength(current.dayIndex)) {
-      nextCl = averageCycleLength(addCycleToHistory(current.dayIndex), cycleLength);
+    if (isRealCycleLength(from.dayIndex)) {
+      nextCl = averageCycleLength(addCycleToHistory(from.dayIndex), cycleLength);
     }
 
     router.replace(`/navigate?day1=${encodeURIComponent(newDay1Str)}&bd=5&cl=${nextCl}`);
     router.refresh();
   }
-
-  // NEW: open menu as position:fixed, clamped inside viewport
-  function openMenuAtButton() {
-    try {
-      if (typeof window === "undefined") {
-        setMenuOpen(true);
-        return;
-      }
-
-      const btn = menuBtnRef.current;
-      const rect = btn?.getBoundingClientRect();
-      const viewportW = window.innerWidth || 360;
-
-      const desiredW = 240; // slightly wider so text fits
-      const safeW = Math.min(desiredW, Math.max(180, viewportW - 16));
-
-      const top = (rect ? rect.bottom : 56) + 6;
-
-      // Align menu’s RIGHT edge to button’s right edge, then clamp
-      const rawLeft = rect ? rect.right - safeW : 8;
-      const left = Math.min(Math.max(8, rawLeft), Math.max(8, viewportW - safeW - 8));
-
-      setMenuPos({ left, top, width: safeW });
-      setMenuOpen(true);
-    } catch {
-      setMenuOpen(true);
-    }
-  }
-
-  // Close menu on scroll/resize (iOS Safari can shift viewport without firing “layout” as expected)
-  React.useEffect(() => {
-    if (!menuOpen) return;
-
-    const onAny = () => {
-      setMenuOpen(false);
-    };
-
-    window.addEventListener("scroll", onAny, { passive: true });
-    window.addEventListener("resize", onAny);
-
-    return () => {
-      window.removeEventListener("scroll", onAny);
-      window.removeEventListener("resize", onAny);
-    };
-  }, [menuOpen]);
 
   // --- Swipe handling (no libs) ---
   const drag = useRef({ active: false, startX: 0, dx: 0 });
@@ -674,212 +637,80 @@ function NavigateInner() {
       style={{
         maxWidth: 520,
         margin: "18px auto",
-        padding: 14,
+        padding: "14px 14px 96px",
         fontFamily: "system-ui",
         color: "var(--foreground)",
         background: "var(--background)",
       }}
     >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12, flexWrap: "wrap" }}>
-        <div>
-          <div style={{ fontSize: 22, fontWeight: 1000 as any, letterSpacing: -0.2 }}>Her Mood Map</div>
-       
-        </div>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", gap: 12 }}>
+        <div style={{ fontSize: 24, fontWeight: 1000 as any, letterSpacing: -0.3 }}>Eggshells</div>
+      </div>
 
-        <div style={{ display: "flex", gap: 10, alignItems: "center" }}>
-          <Link href="/" style={{ fontSize: 13, textDecoration: "none", fontWeight: 900 }}>
-            🏠 Home
-          </Link>
-          <Link href="/about" style={{ fontSize: 13, textDecoration: "none", fontWeight: 900 }}>
-            About
-          </Link>
-
-          <div style={{ position: "relative" }}>
-            <button
-              ref={menuBtnRef}
-              type="button"
-              onClick={() => {
-                if (menuOpen) {
-                  setMenuOpen(false);
-                } else {
-                  openMenuAtButton();
-                }
-              }}
-              aria-label="Menu"
-              style={{
-                padding: "6px 8px",
-                border: "1px solid var(--input-border)",
-                borderRadius: 8,
-                background: "var(--input-bg)",
-                color: "var(--foreground)",
-                cursor: "pointer",
-                fontSize: 18,
-                lineHeight: 1,
-              }}
-            >
-              ⋮
-            </button>
-
-            {menuOpen && (
-              <>
-                <div style={{ position: "fixed", inset: 0, zIndex: 10 }} onClick={() => setMenuOpen(false)} aria-hidden="true" />
-
-                <div
-                  style={{
-                    position: "fixed",
-                    left: menuPos?.left ?? 8,
-                    top: menuPos?.top ?? 56,
-                    zIndex: 20,
-                    width: menuPos?.width ?? 240,
-                    maxWidth: "calc(100vw - 16px)",
-                    padding: "8px 0",
-                    background: "var(--background)",
-                    border: "1px solid var(--input-border)",
-                    borderRadius: 12,
-                    boxShadow: "0 8px 24px rgba(0,0,0,0.18)",
-                  }}
-                >
-                  <button
-                    type="button"
-                    onClick={() => {
-                      startNewCycle();
-                    }}
-                    style={{
-                      display: "block",
-                      width: "100%",
-                      padding: "10px 14px",
-                      textAlign: "left",
-                      border: "none",
-                      background: "transparent",
-                      color: "var(--foreground)",
-                      fontSize: 14,
-                      fontWeight: 600,
-                      cursor: "pointer",
-                    }}
-                  >
-                    Start New Cycle Now
-                  </button>
-
-                  <Link
-                    href={`/?day1=${encodeURIComponent(day1Str)}&cl=${cycleLength}`}
-                    style={{
-                      display: "block",
-                      padding: "10px 14px",
-                      textAlign: "left",
-                      color: "var(--foreground)",
-                      fontSize: 14,
-                      fontWeight: 600,
-                      textDecoration: "none",
-                    }}
-                    onClick={() => setMenuOpen(false)}
-                  >
-                    Edit Date &amp; Cycle Length
-                  </Link>
-
-                  <Link
-                    href="/about"
-                    style={{
-                      display: "block",
-                      padding: "10px 14px",
-                      color: "var(--foreground)",
-                      fontSize: 14,
-                      fontWeight: 600,
-                      textDecoration: "none",
-                    }}
-                    onClick={() => setMenuOpen(false)}
-                  >
-                    About
-                  </Link>
-
-                  <Link
-                    href="/disclaimer"
-                    style={{
-                      display: "block",
-                      padding: "10px 14px",
-                      color: "var(--foreground)",
-                      fontSize: 14,
-                      fontWeight: 600,
-                      textDecoration: "none",
-                    }}
-                    onClick={() => setMenuOpen(false)}
-                  >
-                    Disclaimer
-                  </Link>
-                </div>
-              </>
-            )}
+      {tab === "month" && (
+        <section style={{ marginTop: 14 }}>
+          <div style={{ fontSize: 20, fontWeight: 900 }}>This cycle</div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(150px, 1fr))", gap: 10, marginTop: 12 }}>
+            <div style={{ padding: 14, borderRadius: 12, background: "#F1FFF5", border: "1px solid #16A34A" }}>
+              <div style={{ fontSize: 14, fontWeight: 800, color: "#0B6B45", marginBottom: 4 }}>Best time to talk</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: "#171717" }}>{quickDateRanges.talk}</div>
+              <div style={{ fontSize: 14, color: "#333", marginTop: 4 }}>Talk, plan, chill.</div>
+            </div>
+            <div style={{ padding: 14, borderRadius: 12, background: "#FFF1E8", border: "1px solid #EA580C" }}>
+              <div style={{ fontSize: 14, fontWeight: 800, color: "#9A3412", marginBottom: 4 }}>Worst time for</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: "#171717" }}>{quickDateRanges.worstTalk}</div>
+              <div style={{ fontSize: 14, color: "#333", marginTop: 4 }}>Heavy talks, pushing for answers, rows.</div>
+            </div>
+            <div style={{ padding: 14, borderRadius: 12, background: "#FFF7E6", border: "1px solid #F59E0B" }}>
+              <div style={{ fontSize: 14, fontWeight: 800, color: "#7A4B00", marginBottom: 4 }}>Often more flirty</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: "#171717" }}>{quickDateRanges.libido}</div>
+              <div style={{ fontSize: 14, color: "#333", marginTop: 4 }}>Still ask. A calendar can't say yes.</div>
+            </div>
+            <div style={{ padding: 14, borderRadius: 12, background: "#FFF1E8", border: "1px solid #EA580C" }}>
+              <div style={{ fontSize: 14, fontWeight: 800, color: "#9A3412", marginBottom: 4 }}>Take it slow</div>
+              <div style={{ fontSize: 16, fontWeight: 700, color: "#171717" }}>{quickDateRanges.worstLibido}</div>
+              <div style={{ fontSize: 14, color: "#333", marginTop: 4 }}>Intimacy may take a back seat. Don't push it.</div>
+            </div>
           </div>
-        </div>
-      </div>
-
-      {/* QUICK RANGES (collapsed by default) */}
-      <div style={{ marginTop: 14 }}>
-        <button
-          type="button"
-          onClick={() => setQuickRangesOpen((v) => !v)}
-          style={{
-            width: "100%",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            padding: "10px 12px",
-            borderRadius: 12,
-            border: "1px solid var(--input-border)",
-            background: "var(--background)",
-            color: "var(--foreground)",
-            cursor: "pointer",
-            fontWeight: 900,
-            fontSize: 13,
-          }}
-        >
-       <span>📅 Month overview</span>
-          <span aria-hidden="true" style={{ fontSize: 16, lineHeight: 1 }}>
-            {quickRangesOpen ? "▾" : "▸"}
-          </span>
-        </button>
-
-        {quickRangesOpen && (
-          <section style={{ marginTop: 12 }}>
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10 }}>
-              <div style={{ padding: 12, borderRadius: 12, background: "#F1FFF5", border: "1px solid #16A34A" }}>
-                <div style={{ fontSize: 11, fontWeight: 800, color: "#0B6B45", marginBottom: 4 }}>Best time to talk</div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{quickDateRanges.talk}</div>
-                <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Talk, plan, chill.</div>
-              </div>
-              <div style={{ padding: 12, borderRadius: 12, background: "#FFECEC", border: "1px solid #EF4444" }}>
-                <div style={{ fontSize: 11, fontWeight: 800, color: "#7F1D1D", marginBottom: 4 }}>Worst time for</div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{quickDateRanges.worstTalk}</div>
-                <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Heavy talks, pushing for answers, rows.</div>
-              </div>
+          <div style={{ marginTop: 10, padding: 14, borderRadius: 12, background: "#F1FFF5", border: "1px solid #16A34A" }}>
+            <div style={{ fontSize: 14, fontWeight: 800, color: "#0B6B45", marginBottom: 4 }}>Best time for the hard chat</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: "#171717" }}>
+              {formatHumanDateRange(hardChatRange.startDate, hardChatRange.endDate)}{" "}
+              <span style={{ color: "#444444", fontWeight: 700 }}>
+                ({bestWorstRanges(bleedOverride, cycleLength).bestDays}, Follicular phase)
+              </span>
             </div>
+          </div>
+        </section>
+      )}
 
-            <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10, marginTop: 10 }}>
-              <div style={{ padding: 12, borderRadius: 12, background: "#FFF7E6", border: "1px solid #F59E0B" }}>
-                <div style={{ fontSize: 11, fontWeight: 800, color: "#7A4B00", marginBottom: 4 }}>Often more flirty</div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{quickDateRanges.libido}</div>
-                <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Still ask. A calendar can't say yes.</div>
-              </div>
+      {tab === "settings" && (
+        <section style={{ marginTop: 14, display: "grid", gap: 10 }}>
+          <div style={{ fontSize: 20, fontWeight: 900 }}>Settings</div>
+          <Link href={`/?day1=${encodeURIComponent(day1Str)}&cl=${cycleLength}`} style={settingsRowStyle}>
+            <span>Edit date &amp; cycle length</span>
+            <span aria-hidden="true">›</span>
+          </Link>
+          <button type="button" onClick={() => startNewCycle(build(baseOffset))} style={{ ...settingsRowStyle, width: "100%", textAlign: "left", cursor: "pointer", fontFamily: "inherit" }}>
+            <span>Her period started today</span>
+            <span aria-hidden="true">›</span>
+          </button>
+          <Link href="/about" style={settingsRowStyle}>
+            <span>About</span>
+            <span aria-hidden="true">›</span>
+          </Link>
+          <Link href="/disclaimer" style={settingsRowStyle}>
+            <span>Disclaimer</span>
+            <span aria-hidden="true">›</span>
+          </Link>
+          <div style={{ marginTop: 8, fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.4 }}>
+            Everything stays on this phone. Nothing is sent anywhere.
+          </div>
+        </section>
+      )}
 
-              <div style={{ padding: 12, borderRadius: 12, background: "#FFECEC", border: "1px solid #EF4444" }}>
-                <div style={{ fontSize: 11, fontWeight: 800, color: "#7F1D1D", marginBottom: 4 }}>Take it slow</div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{quickDateRanges.worstLibido}</div>
-                <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Intimacy may take a back seat. Don't push it.</div>
-              </div>
-            </div>
-
-            <div style={{ marginTop: 10, padding: 12, borderRadius: 12, background: "#F1FFF5", border: "1px solid #16A34A" }}>
-              <div style={{ fontSize: 11, fontWeight: 800, color: "#0B6B45", marginBottom: 4 }}>Best time for the hard chat</div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>
-                {formatHumanDateRange(hardChatRange.startDate, hardChatRange.endDate)}{" "}
-                <span style={{ color: "var(--text-secondary)", fontWeight: 800 }}>
-                  ({bestWorstRanges(bleedOverride, cycleLength).bestDays}, Follicular phase)
-                </span>
-              </div>
-            </div>
-          </section>
-        )}
-      </div>
-
+      {tab === "today" && (
+      <>
       {showBleedQuestion && (
         <section style={{ marginTop: 12, borderRadius: 16, padding: 14, border: "1px solid var(--input-border)", background: "var(--background)", boxShadow: "0 1px 0 rgba(0,0,0,0.05)" }}>
           <div style={{ fontWeight: 1000 as any, color: "var(--foreground)" }}>Day {current.dayIndex}: still on?</div>
@@ -919,7 +750,7 @@ function NavigateInner() {
               : `Tap to start fresh. This one (${current.dayIndex} days) is outside the usual range, so it won't change her average.`}
           </div>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
-            <button onClick={startNewCycle} style={{ border: "1px solid var(--button-primary)", background: "var(--button-primary)", color: "var(--button-primary-color)", padding: "10px 12px", borderRadius: 12, fontWeight: 1000 as any, cursor: "pointer" }}>
+            <button onClick={() => startNewCycle()} style={{ border: "1px solid var(--button-primary)", background: "var(--button-primary)", color: "var(--button-primary-color)", padding: "10px 12px", borderRadius: 12, fontWeight: 1000 as any, cursor: "pointer" }}>
               Yeah, new cycle
             </button>
           </div>
@@ -994,6 +825,56 @@ function NavigateInner() {
   A <span style={{ fontWeight: 900, color: "var(--foreground)" }}>DAMS Labs</span> project
 </div>
               </div>
+      </>
+      )}
+
+      <nav
+        aria-label="Main"
+        style={{
+          position: "fixed",
+          left: 0,
+          right: 0,
+          bottom: 0,
+          zIndex: 30,
+          background: "var(--background)",
+          borderTop: "1px solid var(--input-border)",
+          paddingBottom: "env(safe-area-inset-bottom)",
+        }}
+      >
+        <div style={{ maxWidth: 520, margin: "0 auto", display: "flex" }}>
+          {([
+            ["today", "🧭", "Today"],
+            ["month", "📅", "Month"],
+            ["settings", "⚙️", "Settings"],
+          ] as const).map(([key, emoji, label]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setTab(key)}
+              aria-current={tab === key ? "page" : undefined}
+              style={{
+                flex: 1,
+                minHeight: 60,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                justifyContent: "center",
+                gap: 2,
+                border: "none",
+                background: "transparent",
+                color: tab === key ? "#15803D" : "var(--text-secondary)",
+                fontFamily: "inherit",
+                fontSize: 14,
+                fontWeight: tab === key ? 900 : 600,
+                cursor: "pointer",
+              }}
+            >
+              <span aria-hidden="true" style={{ fontSize: 20, lineHeight: 1 }}>{emoji}</span>
+              {label}
+            </button>
+          ))}
+        </div>
+      </nav>
     </main>
   );
 }
