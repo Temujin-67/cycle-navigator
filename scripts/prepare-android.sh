@@ -10,11 +10,14 @@ MANIFEST=android/app/src/main/AndroidManifest.xml
 APP_GRADLE=android/app/build.gradle
 
 # Nothing the app stores should leave the phone through Android backups.
-sed -i 's/android:allowBackup="true"/android:allowBackup="false"/' "$MANIFEST"
+# (-i.bak works with both GNU and macOS sed)
+sed -i.bak 's/android:allowBackup="true"/android:allowBackup="false"/' "$MANIFEST"
+rm -f "$MANIFEST.bak"
 
 # Google Play needs a higher versionCode on every upload. Codemagic provides BUILD_NUMBER.
 if [ -n "${BUILD_NUMBER:-}" ]; then
-  sed -i -E "s/versionCode [0-9]+/versionCode ${BUILD_NUMBER}/" "$APP_GRADLE"
+  sed -i.bak -E "s/versionCode [0-9]+/versionCode ${BUILD_NUMBER}/" "$APP_GRADLE"
+  rm -f "$APP_GRADLE.bak"
 fi
 
 npx cap sync android
