@@ -1,63 +1,49 @@
-import Link from "next/link";
+import { LegalShell, h2Style, pStyle } from "@/components/LegalShell";
+import { APP_NAME, LEGAL_UPDATED } from "@/lib/site";
+
+export const metadata = { title: "Terms & Disclaimer" };
 
 export default function DisclaimerPage() {
   return (
-    <main
-      style={{
-        maxWidth: 720,
-        margin: "40px auto",
-        padding: "1.5rem 1.25rem",
-        fontFamily: "var(--font-geist-sans), system-ui, sans-serif",
-        color: "var(--foreground)",
-      }}
-    >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-        <h1 style={{ fontSize: "1.75rem", fontWeight: 700, margin: 0 }}>Disclaimer &amp; Terms of Use</h1>
-        <Link href="/" style={{ fontSize: 13, fontWeight: 900 }}>Home</Link>
-      </div>
+    <LegalShell title="Terms & Disclaimer">
+      <p style={{ ...pStyle, color: "var(--text-secondary)" }}>Last updated: {LEGAL_UPDATED}</p>
+      <p style={pStyle}>By using {APP_NAME} you agree to the following. If you do not agree, please do not use the app.</p>
 
-      <p style={{ marginTop: "1rem", lineHeight: 1.6, fontSize: "0.9375rem" }}>
-        By using Her Mood Map you agree to the following. If you do not agree, do not use the app.
+      <h2 style={h2Style}>Not medical advice</h2>
+      <p style={pStyle}>
+        {APP_NAME} is <b>for information and entertainment only</b>. It is not medical advice and not a substitute for a
+        qualified healthcare provider. Do not use it to diagnose, treat or manage any condition, or for contraception or
+        family planning.
       </p>
 
-      <h2 style={{ marginTop: "1.5rem", fontSize: "1.125rem", fontWeight: 700 }}>Not medical or clinical advice</h2>
-      <p style={{ marginTop: "0.5rem", lineHeight: 1.6 }}>
-        Her Mood Map is <b>for informational and educational use only</b>. It is <b>not medical advice</b>, not clinical
-        advice, and not a substitute for advice from a qualified healthcare provider. Do not use this app to make
-        medical decisions, to diagnose, treat, or manage any health condition, or for contraception or family planning.
-        Always consult a healthcare provider for health-related decisions.
+      <h2 style={h2Style}>A guide, not a verdict</h2>
+      <p style={pStyle}>
+        The app uses <b>general cycle patterns</b>. It does not know how any individual feels and does not predict
+        behaviour. People vary, and communication, health, stress and personality all matter more than a calendar. Talk to
+        your partner and ask her instead of assuming.
       </p>
 
-      <h2 style={{ marginTop: "1.5rem", fontSize: "1.125rem", fontWeight: 700 }}>Not a predictor of behaviour or outcomes</h2>
-      <p style={{ marginTop: "0.5rem", lineHeight: 1.6 }}>
-        The app uses <b>general hormonal cycle patterns</b>. It does not predict how any individual will feel or behave.
-        Individual responses vary. Real life — communication, health, stress, personality, and many other factors —
-        overrides any pattern shown here. The app is for <b>understanding and awareness</b>, not control. Do not use it
-        to make assumptions or decisions without talking to your partner.
+      <h2 style={h2Style}>Respect</h2>
+      <p style={pStyle}>
+        Only enter information about someone who is comfortable with you doing so. Do not use the app to pressure,
+        control or make decisions for another person.
       </p>
 
-      <h2 style={{ marginTop: "1.5rem", fontSize: "1.125rem", fontWeight: 700 }}>No guarantees; no liability</h2>
-      <p style={{ marginTop: "0.5rem", lineHeight: 1.6 }}>
-       Her Mood Map is provided &quot;as is&quot; without warranties of any kind. We do not guarantee accuracy, completeness,
-        or fitness for any purpose. To the fullest extent permitted by law, we exclude liability for any loss or damage
-        arising from your use of the app.
+      <h2 style={h2Style}>No guarantees, no liability</h2>
+      <p style={pStyle}>
+        The app is provided &quot;as is&quot; without warranties of any kind. We do not guarantee accuracy or fitness for any
+        purpose. To the fullest extent permitted by law, we are not liable for any loss or damage arising from your use of
+        the app.
       </p>
 
-      <h2 style={{ marginTop: "1.5rem", fontSize: "1.125rem", fontWeight: 700 }}>Privacy</h2>
-      <p style={{ marginTop: "0.5rem", lineHeight: 1.6 }}>
-        Data you enter (e.g. dates, cycle length) is stored locally on your device. We do not collect or transmit it to
-        our servers. Use of the app is at your own risk.
+      <h2 style={h2Style}>Privacy</h2>
+      <p style={pStyle}>
+        What you enter stays on your phone. See the Privacy Policy for details.
       </p>
 
-      <p style={{ marginTop: "1.5rem", fontSize: "0.875rem", color: "var(--text-secondary)", lineHeight: 1.5 }}>
-        Last updated: January 2025. We may update this page from time to time.
+      <p style={{ marginTop: "1.5rem", fontSize: 15, color: "var(--text-secondary)" }}>
+        We may update this page from time to time.
       </p>
-
-      <p style={{ marginTop: "1rem" }}>
-        <Link href="/" style={{ fontSize: 14, fontWeight: 700 }}>← Back to Home</Link>
-        {" · "}
-        <Link href="/about" style={{ fontSize: 14, fontWeight: 700 }}>About</Link>
-      </p>
-    </main>
+    </LegalShell>
   );
 }

@@ -1,6 +1,3 @@
-// CHANGED LINES:
-// - Renamed app from "Cycle Forecast" to "Her Mood Map" in metadata, OpenGraph, and Twitter
-
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
@@ -19,25 +16,25 @@ const siteUrl = "https://cycle-navigator.vercel.app";
 
 export const metadata: Metadata = {
   title: {
-    default: "Her Mood Map",
-    template: "%s | Her Mood Map",
+    default: "Eggshells",
+    template: "%s | Eggshells",
   },
   description:
-    "Understand your partner’s cycle-related mood patterns. Better timing, fewer misunderstandings. Awareness, not prediction.",
+    "Eggshells: know where to step. A tongue-in-cheek day-by-day guide to her cycle, for men. A guide, not a verdict.",
   metadataBase: new URL(siteUrl),
   openGraph: {
-    title: "Her Mood Map",
+    title: "Eggshells",
     description:
-      "Understand your partner’s cycle-related mood patterns. Better timing, fewer misunderstandings. Awareness, not prediction.",
+      "Eggshells: know where to step. A tongue-in-cheek day-by-day guide to her cycle, for men. A guide, not a verdict.",
     url: siteUrl,
-    siteName: "Her Mood Map",
+    siteName: "Eggshells",
     type: "website",
   },
   twitter: {
     card: "summary",
-    title: "Her Mood Map",
+    title: "Eggshells",
     description:
-      "Understand your partner’s cycle-related mood patterns. Better timing, fewer misunderstandings. Awareness, not prediction.",
+      "Eggshells: know where to step. A tongue-in-cheek day-by-day guide to her cycle, for men. A guide, not a verdict.",
   },
   robots: "index, follow",
 };

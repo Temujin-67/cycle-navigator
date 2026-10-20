@@ -1,50 +1,38 @@
-import Link from "next/link";
+import { LegalShell, h2Style, pStyle } from "@/components/LegalShell";
+import { APP_NAME, PUBLISHER } from "@/lib/site";
+
+export const metadata = { title: "About" };
 
 export default function AboutPage() {
   return (
-    <main
-      style={{
-        maxWidth: 720,
-        margin: "40px auto",
-        padding: "1.5rem 1.25rem",
-        fontFamily: "var(--font-geist-sans), system-ui, sans-serif",
-        color: "var(--foreground)",
-      }}
-    >
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "1rem" }}>
-        <h1 style={{ fontSize: "1.75rem", fontWeight: 700, margin: 0 }}>About Her Mood Map</h1>
-        <Link href="/" style={{ fontSize: 13, fontWeight: 900 }}>Home</Link>
-      </div>
-
-      <p style={{ marginTop: "1rem", lineHeight: 1.5 }}>
-        Her Mood Map is built on <b>general hormonal cycle patterns</b>. It helps men understand what phase she&apos;s in
-        and how it affects her mood — so you get fewer arguments and a better relationship. No blame. Just practical
-        awareness.
+    <LegalShell title={`About ${APP_NAME}`}>
+      <p style={pStyle}>
+        {APP_NAME} is a tongue-in-cheek guide for men. It uses <b>general cycle patterns</b> to give you a day-by-day
+        heads-up on what kind of day she may be having, so you can pick your moments. A guide, not a verdict: people
+        vary, and real life always wins.
       </p>
 
-      <h2 style={{ marginTop: "1.5rem", fontSize: "1.125rem", fontWeight: 700 }}>How it works</h2>
-      <ul style={{ lineHeight: 1.6, paddingLeft: "1.25rem" }}>
-        <li><b>First day of her cycle</b> — The first day of her last period. Enter it so the app can count days and phases.</li>
-        <li><b>Phases</b> — Menstrual, Follicular, Ovulatory, Luteal, and PMS. Each phase has typical patterns for mood, stress, and libido.</li>
-        <li><b>Period over?</b> — If her period is still going past the default 5 days, tap &quot;No, still going&quot; so we keep that week as Menstrual phase.</li>
-        <li><b>New period started?</b> — When you reach the end of a cycle (e.g. Day 28), the app asks if a new period has started. Say &quot;Yes, new cycle&quot; to reset to Day 1. We use that to learn her cycle length for next time.</li>
-        <li><b>Pattern-based</b> — The app uses general patterns, not her personal data over time. Individual responses differ.</li>
+      <h2 style={h2Style}>How it works</h2>
+      <ul style={{ paddingLeft: "1.25rem", marginTop: "0.5rem" }}>
+        <li><b>First day of her last period.</b> Enter it once and the app counts the days and works out the phase. It remembers it on this phone.</li>
+        <li><b>Her typical cycle length.</b> Between 21 and 35 days. The default is 28.</li>
+        <li><b>Phases.</b> Menstrual, Follicular, Ovulatory, Luteal and PMS. Each day shows a short line for mood, libido, stress, communication, what to do and what to avoid.</li>
+        <li><b>Still on?</b> If her period runs past the days you entered, tap &quot;Still going&quot; and the app keeps those days as Menstrual.</li>
+        <li><b>New period?</b> At the end of a cycle the app asks whether a new one has started. Tap &quot;Yeah, new cycle&quot; to go back to Day 1. The app remembers how long each cycle was and adjusts to her average over time.</li>
       </ul>
 
-      <h2 style={{ marginTop: "1.5rem", fontSize: "1.125rem", fontWeight: 700 }}>Disclaimer</h2>
-
-      <p style={{ marginTop: "0.5rem", lineHeight: 1.5 }}>
-        Individual responses vary. This tool does <b>not</b> predict behaviour or outcomes. It is <b>not medical
-        advice</b>. Real life — communication, health, stress, personality — always overrides any pattern shown here.
+      <h2 style={h2Style}>Not a substitute for talking to her</h2>
+      <p style={pStyle}>
+        The app does not know how she actually feels. It is not medical advice, it is not for contraception or family
+        planning, and it does not predict behaviour. Ask her. Read the room.
       </p>
 
-      <p style={{ marginTop: "0.75rem", lineHeight: 1.5 }}>
-        The app is for <b>understanding</b>, not control. Don&apos;t use it to make assumptions or decisions without
-        talking to your partner.
+      <h2 style={h2Style}>Your data</h2>
+      <p style={pStyle}>
+        Everything you enter stays on this phone. There are no accounts and nothing is sent anywhere.
       </p>
-      <p style={{ marginTop: "1rem" }}>
-        <Link href="/disclaimer" style={{ fontSize: 14, fontWeight: 700 }}>Full disclaimer &amp; terms of use →</Link>
-      </p>
-    </main>
+
+      <p style={{ marginTop: "1.5rem", fontSize: 15, color: "var(--text-secondary)" }}>A {PUBLISHER} project.</p>
+    </LegalShell>
   );
 }

@@ -1,59 +1,55 @@
-export const metadata = {
-  title: "Privacy Policy — Her Mood Map",
-}; 
+import { LegalShell, h2Style, pStyle } from "@/components/LegalShell";
+import { APP_NAME, CONTACT_EMAIL, LEGAL_UPDATED, PUBLISHER } from "@/lib/site";
+
+export const metadata = { title: "Privacy Policy" };
 
 export default function PrivacyPage() {
   return (
-    <main style={{ maxWidth: 820, margin: "0 auto", padding: 24, lineHeight: 1.6 }}>
-      <h1 style={{ fontSize: 28, marginBottom: 8 }}>Privacy Policy</h1>
-      <p style={{ opacity: 0.8, marginTop: 0 }}>Last updated: 3 February 2026</p>
-
-      <p>
-        Her Mood Map (“the App”) is provided for informational purposes only. We
-        respect your privacy and are committed to protecting it.
+    <LegalShell title="Privacy Policy">
+      <p style={{ ...pStyle, color: "var(--text-secondary)" }}>Last updated: {LEGAL_UPDATED}</p>
+      <p style={pStyle}>
+        {APP_NAME} (&quot;the app&quot;) is published by {PUBLISHER}. The short version: the app keeps what you enter on
+        your phone and does not send it to us or to anyone else.
       </p>
 
-      <h2 style={{ fontSize: 18, marginTop: 24 }}>1. Data Collection</h2>
-      <p>
-        Her Mood Map does not collect, store, transmit, or share personal data.
-        The App does not use analytics, advertising SDKs, or third-party tracking.
+      <h2 style={h2Style}>1. What the app stores on your phone</h2>
+      <p style={pStyle}>
+        The first day of her last period, her typical cycle length, her period length, the lengths of past cycles (used
+        to work out an average), your display theme, and whether you have finished the intro. This is saved in the
+        app&apos;s own storage on your device so you do not have to enter it again.
       </p>
 
-      <h2 style={{ fontSize: 18, marginTop: 24 }}>2. Tracking</h2>
-      <p>
-        Her Mood Map does not track users across apps or websites and does not use
-        tracking technologies.
+      <h2 style={h2Style}>2. What we collect</h2>
+      <p style={pStyle}>
+        Nothing. We do not have accounts, servers that receive your data, analytics, advertising or tracking, and the
+        app does not use third-party services that collect data. We cannot see what you enter.
       </p>
 
-      <h2 style={{ fontSize: 18, marginTop: 24 }}>3. Third-Party Services</h2>
-      <p>
-        The App does not integrate third-party services that collect data from users.
+      <h2 style={h2Style}>3. Deleting your data</h2>
+      <p style={pStyle}>
+        Uninstalling the app removes everything it stored. Because nothing is sent to us, there is nothing on our side to
+        delete.
       </p>
 
-      <h2 style={{ fontSize: 18, marginTop: 24 }}>4. Children’s Privacy</h2>
-      <p>
-        The App is not designed for children and is intended for a mature audience.
-        The App does not knowingly collect data from children.
+      <h2 style={h2Style}>4. Health information</h2>
+      <p style={pStyle}>
+        The dates you enter relate to another person&apos;s menstrual cycle. Please only enter information about someone
+        who is comfortable with you doing so. The app is not a medical device and does not give medical advice. See the
+        Terms &amp; Disclaimer.
       </p>
 
-      <h2 style={{ fontSize: 18, marginTop: 24 }}>5. Medical Disclaimer</h2>
-      <p>
-        Her Mood Map provides general, non-medical, informational content. It is not
-        a medical device and does not provide medical advice, predictions, or diagnoses.
-        It should not be used for contraception or health decisions.
+      <h2 style={h2Style}>5. Age</h2>
+      <p style={pStyle}>
+        The app is for adults. It is not designed for children and we do not knowingly collect data from anyone.
       </p>
 
-      <h2 style={{ fontSize: 18, marginTop: 24 }}>6. Changes to This Policy</h2>
-      <p>
-        If the App’s functionality changes in a way that affects privacy, this policy
-        will be updated.
-      </p>
+      <h2 style={h2Style}>6. Changes</h2>
+      <p style={pStyle}>If the app changes in a way that affects your privacy, we will update this page and the date above.</p>
 
-      <h2 style={{ fontSize: 18, marginTop: 24 }}>7. Contact</h2>
-      <p>
-        If you have questions about this policy, contact:{" "}
-        <a href="mailto:flexyourmarkers@gmail.com">flexyourmarkers@gmail.com</a>
+      <h2 style={h2Style}>7. Contact</h2>
+      <p style={pStyle}>
+        Questions about this policy: <a href={`mailto:${CONTACT_EMAIL}`} style={{ fontWeight: 700 }}>{CONTACT_EMAIL}</a>
       </p>
-    </main>
+    </LegalShell>
   );
 }

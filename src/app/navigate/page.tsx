@@ -699,8 +699,16 @@ function NavigateInner() {
             <span>About</span>
             <span aria-hidden="true">›</span>
           </Link>
+          <Link href="/privacy" style={settingsRowStyle}>
+            <span>Privacy Policy</span>
+            <span aria-hidden="true">›</span>
+          </Link>
           <Link href="/disclaimer" style={settingsRowStyle}>
-            <span>Disclaimer</span>
+            <span>Terms &amp; Disclaimer</span>
+            <span aria-hidden="true">›</span>
+          </Link>
+          <Link href="/support" style={settingsRowStyle}>
+            <span>Support</span>
             <span aria-hidden="true">›</span>
           </Link>
           <div style={{ marginTop: 8, fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.4 }}>

@@ -1,5 +1,3 @@
-// CHANGED LINES:
-// - Changed Home page H1 from "Cycle Forecast" to "Her Mood Map"
 
 "use client";
 
@@ -271,13 +269,12 @@ function HomePageContent() {
       )}
 
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "0.5rem" }}>
-        <h1 style={{ fontSize: "1.75rem", fontWeight: 700, margin: 0, letterSpacing: "-0.02em" }}>Her Mood Map</h1>
+        <h1 style={{ fontSize: "1.75rem", fontWeight: 700, margin: 0, letterSpacing: "-0.02em" }}>Eggshells</h1>
       </div>
 
       <p style={{ fontSize: "0.9375rem", color: "var(--text-secondary)", lineHeight: 1.45, marginBottom: "1.5rem" }}>
-        A simple day-by-day read of the cycle — built for men who want an easier life with their partner. It helps you time
-        conversations, avoid pointless friction, and get a rough idea of what “today” might feel like. People vary and real life
-        always wins — this just gives you a smarter starting point.
+        Know where to step. A simple day-by-day read of her cycle, built for men. Use it to pick your moments and skip
+        pointless friction. A guide, not a verdict: people vary and real life always wins.
       </p>
 
       <label style={{ display: "block", marginTop: "1.25rem", fontSize: "0.9375rem", fontWeight: 600 }}>

@@ -1,14 +1,7 @@
-// CHANGED LINES:
-// - Resolved merge conflict markers
-// - Renamed app to "Her Mood Map" (name + short_name)
-// - Updated description to match positioning (partner mood awareness; not prediction)
-// - Kept stable PWA settings: start_url, display, background_color, theme_color, portrait orientation
-// - Normalised icon sizes to "any" for favicon.ico
-
 {
-  "name": "Her Mood Map",
-  "short_name": "Her Mood Map",
-  "description": "Understand your partner’s cycle-related mood patterns. Awareness, not prediction.",
+  "name": "Eggshells: Know Where to Step",
+  "short_name": "Eggshells",
+  "description": "A tongue-in-cheek day-by-day guide to her cycle, for men. A guide, not a verdict.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
