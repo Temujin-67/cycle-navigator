@@ -39,8 +39,6 @@ type DayInfo = {
 
   play: string; // replaces Focus + Helps
   avoid: string;
-
-  fertility: string;
 };
 
 const DEFAULTS = {
@@ -148,27 +146,6 @@ function riskFor(phase: Phase): RiskLevel {
   return "Low";
 }
 
-function ovulationMeta(dayIndex: number, cycleLengthOverride?: number) {
-  const cycleLength = cycleLengthOverride ?? DEFAULTS.cycleLength;
-  const peak = Math.round(cycleLength / 2);
-  const fertileStart = peak - 2;
-  const fertileEnd = peak + 1;
-  return {
-    peak,
-    fertileStart,
-    fertileEnd,
-    isPeak: dayIndex === peak,
-    inWindow: dayIndex >= fertileStart && dayIndex <= fertileEnd,
-  };
-}
-
-function fertilityLine(dayIndex: number, cycleLengthOverride?: number) {
-  const { isPeak, inWindow } = ovulationMeta(dayIndex, cycleLengthOverride);
-  if (isPeak) return "Best day for it.";
-  if (inWindow) return "High odds. Fertile window.";
-  return "Lower odds.";
-}
-
 // Best / worst day ranges for this cycle (depends on bleed and cycle length)
 function bestWorstRanges(bleedOverride: number, cycleLengthOverride?: number) {
   const bleed = bleedOverride ?? DEFAULTS.bleedDays;
@@ -178,8 +155,6 @@ function bestWorstRanges(bleedOverride: number, cycleLengthOverride?: number) {
   const ovStart = ovCenter - ovHalf;
   const ovEnd = ovCenter + ovHalf;
   const pmsStart = cycleLength - DEFAULTS.pmsDays + 1;
-  const fertileStart = ovCenter - 2;
-  const fertileEnd = ovCenter + 1;
   const bestStart = bleed + 1;
   const bestEnd = ovEnd;
   const worstStart = pmsStart;
@@ -189,7 +164,6 @@ function bestWorstRanges(bleedOverride: number, cycleLengthOverride?: number) {
     worstDays: `Day ${worstStart}-${worstEnd}`,
     bestLibidoDays: `Day ${ovStart}-${ovEnd}`,
     worstLibidoDays: `Day 1-${bleed}, ${pmsStart}-${worstEnd}`,
-    bestPregnancyDays: `Day ${fertileStart}-${fertileEnd}`,
   };
 }
 
@@ -201,8 +175,9 @@ function moodEmojiForPhase(phase: Phase): string {
 }
 
 function libidoEmojiForPhase(phase: Phase): string {
-  if (phase === "Menstrual" || phase === "PMS") return "🚫"; // none / leave it
-  if (phase === "Ovulatory") return "🔥"; // high
+  // Soft icons on purpose: a stop sign or a flame would read her availability from the calendar.
+  if (phase === "Menstrual" || phase === "PMS") return "🌙"; // go slow
+  if (phase === "Ovulatory") return "✨"; // often more social
   if (phase === "Follicular") return "📈"; // building / rising
   return "🟡"; // Luteal: moderate / variable
 }
@@ -222,7 +197,7 @@ function copyFor(phase: Phase, dayIndex: number) {
         dayIndex,
         0
       ),
-      libido: pickUnique(["Interest is picking up.", "Better than last week.", "Easier day for that."], dayIndex, 1),
+      libido: pickUnique(["Interest may be picking up.", "Often a bit better than last week.", "A fair day to flirt. Still ask."], dayIndex, 1),
       stress: pickUnique(["Won't blow up as easy.", "More patience today.", "Normal stuff doesn't set her off."], dayIndex, 2),
       communication: pickUnique(
         ["Say your bit, then leave it. Don’t turn it into a thing.", "Keep it short. No essays.", "Direct. Don’t waffle."],
@@ -241,7 +216,7 @@ function copyFor(phase: Phase, dayIndex: number) {
   if (phase === "Ovulatory") {
     return {
       mood: pickUnique(["More open today.", "Up for stuff.", "Responds better."], dayIndex, 0),
-      libido: pickUnique(["Up for it today.", "Signals are clear.", "Obvious."], dayIndex, 1),
+      libido: pickUnique(["May feel more social and flirty. Ask, don't assume.", "Often a higher-energy day. A calendar can't say yes.", "Flirting may land better. Read her, not the calendar."], dayIndex, 1),
       stress: pickUnique(["Harder to piss her off today.", "Less friction.", "Less defensive."], dayIndex, 2),
       communication: pickUnique(
         ["Say it, then drop it. Don’t turn it into a debate.", "How you say it matters. Keep it confident.", "Don’t waffle."],
@@ -256,7 +231,7 @@ function copyFor(phase: Phase, dayIndex: number) {
   if (phase === "Menstrual") {
     return {
       mood: pickUnique(["Less patience today.", "Short fuse today.", "Small stuff irritates faster."], dayIndex, 0),
-      libido: pickUnique(["Not in the mood today.", "Forget it today.", "Leave it."], dayIndex, 1),
+      libido: pickUnique(["Intimacy may not be on her mind. Don't push.", "Go easy. Let her lead.", "Don't push it. Ask what she feels like."], dayIndex, 1),
       stress: pickUnique(["Gets stressed fast.", "No patience for hassle.", "Short fuse."], dayIndex, 2),
       communication: pickUnique(["Talk less or you'll get a row.", "Short. Facts only.", "Not the day for lectures."], dayIndex, 3),
       play: pickUnique(["Essentials only. Skip the rest.", "Basics. Don’t add more.", "Keep it simple."], dayIndex, 4),
@@ -267,7 +242,7 @@ function copyFor(phase: Phase, dayIndex: number) {
   if (phase === "Luteal") {
     return {
       mood: pickUnique(["Less playful. More serious.", "Mood varies.", "Gets annoyed easier."], dayIndex, 0),
-      libido: pickUnique(["Depends on her mood.", "Possible but not a given.", "Less consistent than last week."], dayIndex, 1),
+      libido: pickUnique(["Varies a lot. Ask, don't guess.", "Could go either way. Let her lead.", "Often less consistent than last week."], dayIndex, 1),
       stress: pickUnique(["Can't handle chaos today.", "Irritated easy.", "Push and you get friction."], dayIndex, 2),
       communication: pickUnique(
         ["Say it once, clear. Don’t turn it into a thing.", "Clear. Specific. No vague stuff.", "Short. Don’t reopen it."],
@@ -282,7 +257,7 @@ function copyFor(phase: Phase, dayIndex: number) {
   // PMS
   return {
     mood: pickUnique(["No room for error.", "Reacts sharp.", "Sensitive to how you say it."], dayIndex, 0),
-    libido: pickUnique(["Not a priority today.", "Forget it today.", "Unpredictable."], dayIndex, 1),
+    libido: pickUnique(["Intimacy may not be a priority. Don't push.", "Go easy. Let her lead.", "Unpredictable. Ask first."], dayIndex, 1),
     stress: pickUnique(["Small stuff feels big to her.", "Things escalate fast.", "Thin patience."], dayIndex, 2),
     communication: pickUnique(["No debates.", "Don't correct her.", "Listen more. Explain less."], dayIndex, 3),
     play: pickUnique(["Do the basics. Don’t poke.", "Reduce friction. Keep it calm.", "Don't make it worse. Keep it simple."], dayIndex, 4),
@@ -294,7 +269,7 @@ function PhaseChip({ phase }: { phase: Phase }) {
   const m: Record<Phase, { border: string; emoji: string }> = {
     Menstrual: { border: "#FF3B7B", emoji: "🩸" },
     Follicular: { border: "#16A34A", emoji: "🌱" },
-    Ovulatory: { border: "#F59E0B", emoji: "🔥" },
+    Ovulatory: { border: "#F59E0B", emoji: "☀️" },
     Luteal: { border: "#2563EB", emoji: "🧠" },
     PMS: { border: "#EF4444", emoji: "⚡" },
   };
@@ -349,7 +324,7 @@ function RiskChip({ risk }: { risk: RiskLevel }) {
   );
 }
 
-function DayCard({ d, hidePregnancy }: { d: DayInfo; hidePregnancy?: boolean }) {
+function DayCard({ d }: { d: DayInfo }) {
   const phaseBg: Record<Phase, { bg: string; border: string }> = {
     Menstrual: { bg: "#FFF1F5", border: "#FF3B7B" },
     Follicular: { bg: "#F1FFF5", border: "#16A34A" },
@@ -399,7 +374,6 @@ function DayCard({ d, hidePregnancy }: { d: DayInfo; hidePregnancy?: boolean }) 
         {row("💬", "Communication", d.communication)}
         {row("🎯", "Today", d.play)}
         {row("🚫", "Avoid", d.avoid)}
-        {!hidePregnancy && row("🤰", "Pregnancy odds", d.fertility)}
       </div>
 
       <div style={{ marginTop: 14, fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.35 }}>
@@ -441,30 +415,11 @@ function NavigateInner() {
 
   const [dismissBleedPrompt, setDismissBleedPrompt] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [hidePregnancy, setHidePregnancy] = useState(false);
   const [quickRangesOpen, setQuickRangesOpen] = useState(false);
 
   // NEW: fixed-position menu anchoring (prevents iOS left-clipping)
   const menuBtnRef = useRef<HTMLButtonElement | null>(null);
   const [menuPos, setMenuPos] = useState<{ left: number; top: number; width: number } | null>(null);
-
-  React.useEffect(() => {
-    try {
-      if (typeof window !== "undefined") {
-        const v = window.localStorage.getItem("cf_hide_pregnancy");
-        setHidePregnancy(v === "1");
-      }
-    } catch {}
-  }, []);
-
-  function toggleHidePregnancy() {
-    const next = !hidePregnancy;
-    setHidePregnancy(next);
-    try {
-      if (typeof window !== "undefined") window.localStorage.setItem("cf_hide_pregnancy", next ? "1" : "0");
-    } catch {}
-    setMenuOpen(false);
-  }
 
   const day1 = useMemo(() => new Date(day1Str + "T12:00:00"), [day1Str]);
   const today = new Date();
@@ -493,8 +448,7 @@ function NavigateInner() {
     const phase = phaseForDay(dayIndex, bleedOverride, cycleLength);
     const risk = riskFor(phase);
     const c = copyFor(phase, dayIndex);
-    const fertility = fertilityLine(dayIndex, cycleLength);
-    return { date, dayIndex, phase, risk, fertility, ...c };
+    return { date, dayIndex, phase, risk, ...c };
   };
 
   const current = useMemo(() => build(viewOffset), [viewOffset, bleedOverride, cycleLength]);
@@ -686,9 +640,6 @@ function NavigateInner() {
 
     const pmsStart = cycleLen - DEFAULTS.pmsDays + 1;
 
-    const fertileStart = ovCenter - 2;
-    const fertileEnd = ovCenter + 1;
-
     const talkStart = bleed + 1;
     const talkEnd = ovEnd;
 
@@ -702,7 +653,6 @@ function NavigateInner() {
       worstTalk: formatHumanDateRangeNoYear(d(worstTalkStart), d(worstTalkEnd)),
       libido: formatHumanDateRangeNoYear(d(ovStart), d(ovEnd)),
       worstLibido: `${formatHumanDateRangeNoYear(d(1), d(bleed))}, ${formatHumanDateRangeNoYear(d(pmsStart), d(cycleLen))}`,
-      pregnancy: formatHumanDateRangeNoYear(d(fertileStart), d(fertileEnd)),
     };
   }, [day1, bleedOverride, cycleLength]);
 
@@ -813,25 +763,6 @@ function NavigateInner() {
                     Edit Date &amp; Cycle Length
                   </Link>
 
-                  <button
-                    type="button"
-                    onClick={toggleHidePregnancy}
-                    style={{
-                      display: "block",
-                      width: "100%",
-                      padding: "10px 14px",
-                      textAlign: "left",
-                      border: "none",
-                      background: "transparent",
-                      color: "var(--foreground)",
-                      fontSize: 14,
-                      fontWeight: 600,
-                      cursor: "pointer",
-                    }}
-                  >
-                    {hidePregnancy ? "Show Pregnancy Section" : "Hide Pregnancy Section"}
-                  </button>
-
                   <Link
                     href="/about"
                     style={{
@@ -911,21 +842,15 @@ function NavigateInner() {
 
             <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(140px, 1fr))", gap: 10, marginTop: 10 }}>
               <div style={{ padding: 12, borderRadius: 12, background: "#FFF7E6", border: "1px solid #F59E0B" }}>
-                <div style={{ fontSize: 11, fontWeight: 800, color: "#7A4B00", marginBottom: 4 }}>Best for libido</div>
+                <div style={{ fontSize: 11, fontWeight: 800, color: "#7A4B00", marginBottom: 4 }}>Often more flirty</div>
                 <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{quickDateRanges.libido}</div>
-                <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>She's up for it. You'll know.</div>
+                <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Still ask. A calendar can't say yes.</div>
               </div>
 
               <div style={{ padding: 12, borderRadius: 12, background: "#FFECEC", border: "1px solid #EF4444" }}>
-                <div style={{ fontSize: 11, fontWeight: 800, color: "#7F1D1D", marginBottom: 4 }}>Worst for libido</div>
+                <div style={{ fontSize: 11, fontWeight: 800, color: "#7F1D1D", marginBottom: 4 }}>Take it slow</div>
                 <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{quickDateRanges.worstLibido}</div>
-                <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Not in the mood. Don't push it.</div>
-              </div>
-
-              <div style={{ padding: 12, borderRadius: 12, background: "#EEF7FF", border: "1px solid #2563EB" }}>
-                <div style={{ fontSize: 11, fontWeight: 800, color: "#0B4A84", marginBottom: 4 }}>Best for pregnancy</div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{quickDateRanges.pregnancy}</div>
-                <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Fertile window. Highest odds.</div>
+                <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Intimacy may take a back seat. Don't push it.</div>
               </div>
             </div>
 
@@ -1005,7 +930,7 @@ function NavigateInner() {
             transition: drag.current.active ? "none" : "transform 160ms ease-out",
           }}
                >
-          <DayCard d={current} hidePregnancy={hidePregnancy} />
+          <DayCard d={current} />
         </div>
 
         <div style={{ display: "flex", justifyContent: "space-between", gap: 10, marginTop: 10 }}>
