@@ -6,6 +6,12 @@ set -euo pipefail
 npx cap add ios --packagemanager CocoaPods
 npx @capacitor/assets generate --ios
 
+# iPhone only. Declaring iPad support makes Apple require iPad screenshots (this caused a rejection before).
+PBX=ios/App/App.xcodeproj/project.pbxproj
+sed -i.bak 's/TARGETED_DEVICE_FAMILY = "1,2";/TARGETED_DEVICE_FAMILY = 1;/g' "$PBX"
+rm -f "$PBX.bak"
+grep -c "TARGETED_DEVICE_FAMILY = 1;" "$PBX" || echo "warning: device family not changed"
+
 PLIST=ios/App/App/Info.plist
 # The app uses no encryption of its own, so skip the export-compliance question on every upload.
 /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" "$PLIST" 2>/dev/null || \
