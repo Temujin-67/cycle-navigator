@@ -102,3 +102,63 @@ export function clearSettings(): void {
 export function forecastUrl(s: Settings): string {
   return `/navigate?day1=${encodeURIComponent(s.day1)}&cl=${s.cl}&bd=${s.bd}`;
 }
+
+// ---- Learned cycle lengths ----------------------------------------------------------
+// Each time a new period starts, the length of the cycle that just ended is saved.
+// The forecast then uses her average instead of a fixed number.
+
+const HISTORY_KEY = "eg_cycle_history_v1";
+export const HISTORY_MAX = 5;
+/** Until this many real cycles are saved, her stated cycle length counts as one more data point. */
+export const HISTORY_MIN_FOR_PURE_AVERAGE = 3;
+
+/** True when a day count is a believable cycle length (inside the limits). */
+export function isRealCycleLength(n: number): boolean {
+  return Number.isInteger(n) && n >= LIMITS.cycleLength.min && n <= LIMITS.cycleLength.max;
+}
+
+export function loadCycleHistory(): number[] {
+  try {
+    if (typeof window === "undefined") return [];
+    const raw = window.localStorage.getItem(HISTORY_KEY);
+    if (!raw) return [];
+    const parsed: unknown = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.filter((n): n is number => typeof n === "number" && isRealCycleLength(n)).slice(-HISTORY_MAX);
+  } catch {
+    return [];
+  }
+}
+
+/** Saves one finished cycle length (ignored if it is not a believable length) and returns the history. */
+export function addCycleToHistory(length: number): number[] {
+  const history = loadCycleHistory();
+  if (!isRealCycleLength(length)) return history;
+  const next = [...history, length].slice(-HISTORY_MAX);
+  try {
+    if (typeof window !== "undefined") window.localStorage.setItem(HISTORY_KEY, JSON.stringify(next));
+  } catch {
+    // Storage unavailable: the average still works for this session through the return value.
+  }
+  return next;
+}
+
+export function clearCycleHistory(): void {
+  try {
+    if (typeof window !== "undefined") window.localStorage.removeItem(HISTORY_KEY);
+  } catch {
+    // ignore
+  }
+}
+
+/**
+ * Her average cycle length, rounded and kept inside the limits.
+ * With fewer than 3 saved cycles, the length she stated is blended in as one more data point,
+ * so a single odd cycle can't swing the forecast.
+ */
+export function averageCycleLength(history: number[], stated: number = DEFAULT_CYCLE_LENGTH): number {
+  const real = history.filter(isRealCycleLength);
+  const values = real.length < HISTORY_MIN_FOR_PURE_AVERAGE ? [...real, parseCycleLength(stated)] : real;
+  const mean = values.reduce((sum, n) => sum + n, 0) / values.length;
+  return parseCycleLength(mean);
+}

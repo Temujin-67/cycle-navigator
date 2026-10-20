@@ -11,7 +11,17 @@
 import Link from "next/link";
 import React, { Suspense, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { LIMITS, forecastUrl, loadSettings, parseBleedDays, parseCycleLength, saveSettings } from "../../lib/settings";
+import {
+  LIMITS,
+  addCycleToHistory,
+  averageCycleLength,
+  forecastUrl,
+  isRealCycleLength,
+  loadSettings,
+  parseBleedDays,
+  parseCycleLength,
+  saveSettings,
+} from "../../lib/settings";
 
 type Phase = "Menstrual" | "Follicular" | "Ovulatory" | "Luteal" | "PMS";
 type RiskLevel = "Low" | "Medium" | "High";
@@ -508,16 +518,6 @@ function NavigateInner() {
     router.refresh();
   }
 
-  const [cycleHistory, setCycleHistory] = useState<number[]>([]);
-  React.useEffect(() => {
-    try {
-      const raw = window.localStorage.getItem("cf_cycle_history");
-      setCycleHistory(raw ? JSON.parse(raw) : []);
-    } catch {
-      setCycleHistory([]);
-    }
-  }, []);
-
   function startNewCycle() {
     setMenuOpen(false);
 
@@ -526,20 +526,16 @@ function NavigateInner() {
     const d = current.date;
 
     const newDay1Str = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    // The length she actually had, kept inside the allowed range
-    const learnedCl = parseCycleLength(current.dayIndex);
 
-    try {
-      if (typeof window !== "undefined") {
-        const raw = window.localStorage.getItem("cf_cycle_history");
-        const prev = raw ? JSON.parse(raw) : [];
-        const next = [...prev, learnedCl].slice(-5);
-        window.localStorage.setItem("cf_cycle_history", JSON.stringify(next));
-        setCycleHistory(next);
-      }
-    } catch (_) {}
+    // Learn from the cycle that just ended, but only if it is a believable length.
+    // A mistaken tap on day 8 must not teach the app that her cycle is 8 days long.
+    // The next cycle uses her average of the last few cycles (blended with the length she stated at first).
+    let nextCl = cycleLength;
+    if (isRealCycleLength(current.dayIndex)) {
+      nextCl = averageCycleLength(addCycleToHistory(current.dayIndex), cycleLength);
+    }
 
-    router.replace(`/navigate?day1=${encodeURIComponent(newDay1Str)}&bd=5&cl=${learnedCl}`);
+    router.replace(`/navigate?day1=${encodeURIComponent(newDay1Str)}&bd=5&cl=${nextCl}`);
     router.refresh();
   }
 
@@ -980,7 +976,9 @@ function NavigateInner() {
         <section style={{ marginTop: 12, borderRadius: 16, padding: 14, border: "1px solid #16A34A", background: "#F1FFF5", boxShadow: "0 1px 0 rgba(0,0,0,0.05)" }}>
           <div style={{ fontWeight: 1000 as any, color: "var(--foreground)" }}>{isOverdueBanner ? "Cycle overdue – ready to start a new one?" : `Day ${current.dayIndex}: new period?`}</div>
           <div style={{ marginTop: 6, fontSize: 13, color: "var(--text-secondary)" }}>
-            Tap to start fresh. We&apos;ll use this length ({current.dayIndex} days) for the next cycle.
+            {isRealCycleLength(current.dayIndex)
+              ? `Tap to start fresh. We'll learn from this cycle (${current.dayIndex} days) so the forecast adapts to her pattern.`
+              : `Tap to start fresh. This one (${current.dayIndex} days) is outside the usual range, so it won't change her average.`}
           </div>
           <div style={{ display: "flex", gap: 10, flexWrap: "wrap", marginTop: 10 }}>
             <button onClick={startNewCycle} style={{ border: "1px solid var(--button-primary)", background: "var(--button-primary)", color: "var(--button-primary-color)", padding: "10px 12px", borderRadius: 12, fontWeight: 1000 as any, cursor: "pointer" }}>
