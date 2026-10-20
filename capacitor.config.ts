@@ -10,7 +10,6 @@ const config: CapacitorConfig = {
   appId: "com.damsstudios.eggshells",
   appName: "Eggshells",
   webDir: "out",
-  bundledWebRuntime: false,
 };
 
 export default config;
