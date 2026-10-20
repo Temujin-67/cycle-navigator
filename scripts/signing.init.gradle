@@ -1,0 +1,19 @@
+// Gradle init script used by the Codemagic Android release build.
+// Adds a "release" signing config that reads the keystore Codemagic injects (CM_KEYSTORE_PATH etc.),
+// so the generated android/ project does not have to be edited by hand.
+allprojects {
+    afterEvaluate { project ->
+        if (project.plugins.hasPlugin("com.android.application")) {
+            def android = project.extensions.getByName("android")
+            def storePath = System.getenv("CM_KEYSTORE_PATH")
+            if (storePath) {
+                def release = android.signingConfigs.create("release")
+                release.storeFile = new File(storePath)
+                release.storePassword = System.getenv("CM_KEYSTORE_PASSWORD")
+                release.keyAlias = System.getenv("CM_KEY_ALIAS")
+                release.keyPassword = System.getenv("CM_KEY_PASSWORD")
+                android.buildTypes.getByName("release").signingConfig = release
+            }
+        }
+    }
+}

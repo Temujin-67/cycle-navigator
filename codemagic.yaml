@@ -1,97 +1,90 @@
-# CHANGED LINES:
-# - android-debug.scripts: ADDED "Generate app icons" step (uses resources/icon.png via @capacitor/assets)
-# - ios-release.scripts: ADDED "Generate app icons" step (uses resources/icon.png via @capacitor/assets)
-# - ios-release.scripts: REMOVED "Prepare App Store Connect key file for publishing" workaround step
-# - ios-release.publishing.app_store_connect: CHANGED to use standard env vars (APP_STORE_CONNECT_PRIVATE_KEY / KEY_ID / ISSUER_ID)
+# Eggshells build pipelines.
+# The android/ and ios/ projects are generated on every build (scripts/prepare-*.sh), so they never go stale.
 
 workflows:
   android-debug:
-    name: Android Debug APK
+    name: Android Debug APK (smoke test)
     max_build_duration: 60
-
+    instance_type: linux_x2
     environment:
-      node: 20
-
+      node: 22
+      java: 21
     scripts:
       - name: Install dependencies
         script: npm install
-
       - name: Build web
         script: npm run build
-
-      - name: Generate app icons
-        script: npx --yes @capacitor/assets generate --android
-
-      - name: Capacitor sync (Android)
-        script: npx cap sync android
-
-      - name: Build Android debug APK
+      - name: Generate and prepare Android project
+        script: bash scripts/prepare-android.sh
+      - name: Build debug APK
         script: |
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug
-
     artifacts:
       - android/app/build/outputs/apk/debug/*.apk
 
-  ios-release:
-    name: iOS Release (IPA)
+  android-release:
+    name: Android Release (signed AAB for Google Play)
     max_build_duration: 60
-
+    instance_type: linux_x2
     environment:
-      node: 20
-      xcode: latest
+      node: 22
+      java: 21
+      android_signing:
+        - eggshells_keystore   # name you give the keystore in Codemagic: Team settings > Code signing identities
+    scripts:
+      - name: Install dependencies
+        script: npm install
+      - name: Build web
+        script: npm run build
+      - name: Generate and prepare Android project
+        script: bash scripts/prepare-android.sh
+      - name: Build signed release bundle
+        script: |
+          cd android
+          chmod +x gradlew
+          ./gradlew -I ../scripts/signing.init.gradle bundleRelease
+    artifacts:
+      - android/app/build/outputs/bundle/release/*.aab
 
+  ios-release:
+    name: iOS Release (IPA to TestFlight)
+    max_build_duration: 60
+    environment:
+      node: 22
+      xcode: latest
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.damsstudios.eggshells
-
       vars:
         APP_TEAM_ID: "KX8Z996CGK"
         XCODE_WORKSPACE: "App.xcworkspace"
         XCODE_SCHEME: "App"
-
-        PROFILE_REFERENCE: "appstore-profile"
-        CERT_REFERENCE: "apple-distribution"
-
       groups:
         - applestore
-
     scripts:
       - name: Install dependencies
-        script: npm ci
-
+        script: npm install
       - name: Build web
         script: npm run build
-
-      - name: Capacitor add + sync (iOS)
-        script: |
-          npx cap add ios || true
-          npx cap sync ios
-
-      - name: Generate app icons
-        script: npx --yes @capacitor/assets generate --ios
-
-      - name: Install signing assets into keychain
+      - name: Generate and prepare iOS project
+        script: bash scripts/prepare-ios.sh
+      - name: Set up signing
         script: |
           keychain initialize
           keychain add-certificates
-
-      - name: Apply provisioning profiles to Xcode project
-        script: xcode-project use-profiles
-
-      - name: Build IPA for App Store
+          xcode-project use-profiles
+      - name: Build IPA
         script: |
           cd ios/App
           xcode-project build-ipa \
             --workspace "$XCODE_WORKSPACE" \
             --scheme "$XCODE_SCHEME" \
             --archive-flags="-destination 'generic/platform=iOS'"
-
     artifacts:
       - ios/App/build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
-
     publishing:
       app_store_connect:
         api_key: $APP_STORE_CONNECT_PRIVATE_KEY

@@ -1,5 +1,5 @@
 {
-  "name": "cycle-navigator",
+  "name": "eggshells",
   "version": "0.1.0",
   "private": true,
   "scripts": {
@@ -8,18 +8,17 @@
     "start": "next start",
     "lint": "eslint",
     "deploy": "vercel --prod",
-
-    "cap:add:ios": "cap add ios",
-    "cap:add:android": "cap add android",
     "cap:sync": "next build && cap sync",
     "cap:open:ios": "cap open ios",
-    "cap:open:android": "cap open android"
+    "cap:open:android": "cap open android",
+    "native:android": "npm run build && bash scripts/prepare-android.sh",
+    "native:ios": "npm run build && bash scripts/prepare-ios.sh"
   },
   "dependencies": {
     "next": "16.1.5",
     "react": "19.2.3",
     "react-dom": "19.2.3",
-    "@capacitor/core": "^6.0.0"
+    "@capacitor/core": "^8.0.0"
   },
   "devDependencies": {
     "@types/node": "^20",
@@ -28,8 +27,12 @@
     "eslint": "^9",
     "eslint-config-next": "16.1.5",
     "typescript": "^5",
-    "@capacitor/cli": "^6.0.0",
-    "@capacitor/android": "^6.0.0",
-    "@capacitor/ios": "^6.0.0"
+    "@capacitor/cli": "^8.0.0",
+    "@capacitor/android": "^8.0.0",
+    "@capacitor/ios": "^8.0.0",
+    "@capacitor/assets": "^3.0.5"
+  },
+  "engines": {
+    "node": ">=22"
   }
 }

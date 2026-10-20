@@ -17,6 +17,7 @@ npm run build      # static export to ./out
 npm run cap:sync   # build web + copy into the native projects
 ```
 
+- Native projects are generated, not committed: `npm run native:android` / `npm run native:ios`.
 - App ID (iOS and Android): `com.damsstudios.eggshells`
 - Icons: source images live in `assets/`; `npx @capacitor/assets generate` creates all sizes.
 - Store listing images: `store-assets/`
