@@ -11,6 +11,7 @@
 import Link from "next/link";
 import React, { Suspense, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { forecastUrl, loadSettings, saveSettings } from "../../lib/settings";
 
 type Phase = "Menstrual" | "Follicular" | "Ovulatory" | "Luteal" | "PMS";
 type RiskLevel = "Low" | "Medium" | "High";
@@ -412,6 +413,20 @@ function NavigateInner() {
   const day1Str = sp.get("day1") || "";
   const bleedOverride = Number(sp.get("bd") || DEFAULTS.bleedDays);
   const cycleLength = Number(sp.get("cl") || DEFAULTS.cycleLength);
+
+  // No date in the address (for example the app was opened on this page directly):
+  // use the saved one, or send the user to the start screen.
+  React.useEffect(() => {
+    if (day1Str) return;
+    const saved = loadSettings();
+    router.replace(saved ? forecastUrl(saved) : "/");
+  }, [day1Str, router]);
+
+  // Remember the date and cycle settings on this phone every time they change.
+  React.useEffect(() => {
+    if (!day1Str) return;
+    saveSettings({ day1: day1Str, cl: cycleLength, bd: bleedOverride });
+  }, [day1Str, cycleLength, bleedOverride]);
 
   const [dismissBleedPrompt, setDismissBleedPrompt] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);

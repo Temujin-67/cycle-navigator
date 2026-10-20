@@ -6,6 +6,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect, Suspense } from "react";
+import { forecastUrl, loadSettings, saveSettings } from "../lib/settings";
 
 const DEFAULT_CYCLE_LENGTH = 28;
 const DEFAULT_BLEED_DAYS = 5;
@@ -49,6 +50,14 @@ function HomePageContent() {
     if (qAge != null) setAge(qAge);
   }, [searchParams]);
 
+  // Returning user: if a date is saved on this phone and the user is not editing it
+  // (the "Edit Last Period Date" link passes ?day1=...), go straight to the forecast.
+  useEffect(() => {
+    if (searchParams.get("day1")) return;
+    const saved = loadSettings();
+    if (saved) router.replace(forecastUrl(saved));
+  }, [searchParams, router]);
+
   useEffect(() => {
     try {
       if (typeof window !== "undefined" && !window.localStorage.getItem(ONBOARDING_KEY)) {
@@ -90,6 +99,7 @@ function HomePageContent() {
   function navigate(cl: number, bd: number) {
     if (!day1) return;
     const a = age || "";
+    saveSettings({ day1, cl, bd });
     router.push(`/navigate?age=${encodeURIComponent(a)}&day1=${encodeURIComponent(day1)}&cl=${cl}&bd=${bd}`);
   }
 
@@ -99,6 +109,7 @@ function HomePageContent() {
       if (typeof window !== "undefined") window.localStorage.setItem(ONBOARDING_KEY, "1");
     } catch {}
     setShowOnboarding(false);
+    saveSettings({ day1: onboardingDay1, cl: DEFAULT_CYCLE_LENGTH, bd: DEFAULT_BLEED_DAYS });
     router.push(
       `/navigate?age=${encodeURIComponent(onboardingAge)}&day1=${encodeURIComponent(onboardingDay1)}&cl=${DEFAULT_CYCLE_LENGTH}&bd=${DEFAULT_BLEED_DAYS}`
     );
