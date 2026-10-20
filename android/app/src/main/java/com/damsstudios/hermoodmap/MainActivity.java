@@ -1,4 +1,4 @@
-package com.damsstudios.cycleforecast;
+package com.damsstudios.hermoodmap;
 
 import com.getcapacitor.BridgeActivity;
 

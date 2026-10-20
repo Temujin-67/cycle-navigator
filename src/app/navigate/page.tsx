@@ -11,9 +11,9 @@
 import Link from "next/link";
 import React, { Suspense, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { DEFAULTS, phaseForDay, riskFor, type Phase, type RiskLevel } from "@/lib/cycle";
+import { DailyHeadsUpMenuItem, useSyncHeadsUps } from "@/lib/HeadsUp";
 
-type Phase = "Menstrual" | "Follicular" | "Ovulatory" | "Luteal" | "PMS";
-type RiskLevel = "Low" | "Medium" | "High";
 
 type DayInfo = {
   date: Date;
@@ -29,15 +29,8 @@ type DayInfo = {
   play: string; // replaces Focus + Helps
   avoid: string;
 
-  fertility: string;
 };
 
-const DEFAULTS = {
-  cycleLength: 28,
-  bleedDays: 5, // check from Day 6 (5-day period possible)
-  pmsDays: 5,
-  ovulationWindow: 3,
-};
 
 function addDays(d: Date, n: number) {
   const x = new Date(d);
@@ -108,55 +101,7 @@ function pickUnique(lines: string[], dayIndex: number, fieldIndex: number) {
   return lines[indices[fieldIndex] % lines.length];
 }
 
-function phaseForDay(
-  dayIndex: number,
-  bleedOverride?: number,
-  cycleLengthOverride?: number
-): Phase {
-  const bleed = bleedOverride ?? DEFAULTS.bleedDays;
-  const cycleLength = cycleLengthOverride ?? DEFAULTS.cycleLength;
 
-  const ovCenter = Math.round(cycleLength / 2);
-  const ovHalf = Math.floor(DEFAULTS.ovulationWindow / 2);
-  const ovStart = ovCenter - ovHalf;
-  const ovEnd = ovCenter + ovHalf;
-
-  const pmsStart = cycleLength - DEFAULTS.pmsDays + 1;
-
-  if (dayIndex <= bleed) return "Menstrual";
-  if (dayIndex >= ovStart && dayIndex <= ovEnd) return "Ovulatory";
-  if (dayIndex >= pmsStart) return "PMS";
-  if (dayIndex > ovEnd && dayIndex < pmsStart) return "Luteal";
-  return "Follicular";
-}
-
-function riskFor(phase: Phase): RiskLevel {
-  if (phase === "PMS") return "High";
-  if (phase === "Menstrual") return "High";
-  if (phase === "Luteal") return "Medium";
-  return "Low";
-}
-
-function ovulationMeta(dayIndex: number, cycleLengthOverride?: number) {
-  const cycleLength = cycleLengthOverride ?? DEFAULTS.cycleLength;
-  const peak = Math.round(cycleLength / 2);
-  const fertileStart = peak - 2;
-  const fertileEnd = peak + 1;
-  return {
-    peak,
-    fertileStart,
-    fertileEnd,
-    isPeak: dayIndex === peak,
-    inWindow: dayIndex >= fertileStart && dayIndex <= fertileEnd,
-  };
-}
-
-function fertilityLine(dayIndex: number, cycleLengthOverride?: number) {
-  const { isPeak, inWindow } = ovulationMeta(dayIndex, cycleLengthOverride);
-  if (isPeak) return "Best day for it.";
-  if (inWindow) return "High odds. Fertile window.";
-  return "Lower odds.";
-}
 
 // Best / worst day ranges for this cycle (depends on bleed and cycle length)
 function bestWorstRanges(bleedOverride: number, cycleLengthOverride?: number) {
@@ -167,8 +112,6 @@ function bestWorstRanges(bleedOverride: number, cycleLengthOverride?: number) {
   const ovStart = ovCenter - ovHalf;
   const ovEnd = ovCenter + ovHalf;
   const pmsStart = cycleLength - DEFAULTS.pmsDays + 1;
-  const fertileStart = ovCenter - 2;
-  const fertileEnd = ovCenter + 1;
   const bestStart = bleed + 1;
   const bestEnd = ovEnd;
   const worstStart = pmsStart;
@@ -178,7 +121,6 @@ function bestWorstRanges(bleedOverride: number, cycleLengthOverride?: number) {
     worstDays: `Day ${worstStart}-${worstEnd}`,
     bestLibidoDays: `Day ${ovStart}-${ovEnd}`,
     worstLibidoDays: `Day 1-${bleed}, ${pmsStart}-${worstEnd}`,
-    bestPregnancyDays: `Day ${fertileStart}-${fertileEnd}`,
   };
 }
 
@@ -338,7 +280,7 @@ function RiskChip({ risk }: { risk: RiskLevel }) {
   );
 }
 
-function DayCard({ d, hidePregnancy }: { d: DayInfo; hidePregnancy?: boolean }) {
+function DayCard({ d }: { d: DayInfo }) {
   const phaseBg: Record<Phase, { bg: string; border: string }> = {
     Menstrual: { bg: "#FFF1F5", border: "#FF3B7B" },
     Follicular: { bg: "#F1FFF5", border: "#16A34A" },
@@ -388,7 +330,6 @@ function DayCard({ d, hidePregnancy }: { d: DayInfo; hidePregnancy?: boolean }) 
         {row("💬", "Communication", d.communication)}
         {row("🎯", "Today", d.play)}
         {row("🚫", "Avoid", d.avoid)}
-        {!hidePregnancy && row("🤰", "Pregnancy odds", d.fertility)}
       </div>
 
       <div style={{ marginTop: 14, fontSize: 12, color: "var(--text-secondary)", lineHeight: 1.35 }}>
@@ -415,30 +356,18 @@ function NavigateInner() {
 
   const [dismissBleedPrompt, setDismissBleedPrompt] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [hidePregnancy, setHidePregnancy] = useState(false);
   const [quickRangesOpen, setQuickRangesOpen] = useState(false);
 
   // NEW: fixed-position menu anchoring (prevents iOS left-clipping)
   const menuBtnRef = useRef<HTMLButtonElement | null>(null);
   const [menuPos, setMenuPos] = useState<{ left: number; top: number; width: number } | null>(null);
 
-  React.useEffect(() => {
-    try {
-      if (typeof window !== "undefined") {
-        const v = window.localStorage.getItem("cf_hide_pregnancy");
-        setHidePregnancy(v === "1");
-      }
-    } catch {}
-  }, []);
-
-  function toggleHidePregnancy() {
-    const next = !hidePregnancy;
-    setHidePregnancy(next);
-    try {
-      if (typeof window !== "undefined") window.localStorage.setItem("cf_hide_pregnancy", next ? "1" : "0");
-    } catch {}
-    setMenuOpen(false);
-  }
+  // Keep scheduled daily heads-ups in sync with the cycle shown here (native app only).
+  const headsUpCycle = useMemo(
+    () => ({ day1: day1Str, cycleLength, bleedDays: bleedOverride }),
+    [day1Str, cycleLength, bleedOverride]
+  );
+  useSyncHeadsUps(headsUpCycle);
 
   const day1 = useMemo(() => new Date(day1Str + "T12:00:00"), [day1Str]);
   const today = new Date();
@@ -467,8 +396,7 @@ function NavigateInner() {
     const phase = phaseForDay(dayIndex, bleedOverride, cycleLength);
     const risk = riskFor(phase);
     const c = copyFor(phase, dayIndex);
-    const fertility = fertilityLine(dayIndex, cycleLength);
-    return { date, dayIndex, phase, risk, fertility, ...c };
+    return { date, dayIndex, phase, risk, ...c };
   };
 
   const current = useMemo(() => build(viewOffset), [viewOffset, bleedOverride, cycleLength]);
@@ -670,9 +598,6 @@ function NavigateInner() {
 
     const pmsStart = cycleLen - DEFAULTS.pmsDays + 1;
 
-    const fertileStart = ovCenter - 2;
-    const fertileEnd = ovCenter + 1;
-
     const talkStart = bleed + 1;
     const talkEnd = ovEnd;
 
@@ -686,7 +611,6 @@ function NavigateInner() {
       worstTalk: formatHumanDateRangeNoYear(d(worstTalkStart), d(worstTalkEnd)),
       libido: formatHumanDateRangeNoYear(d(ovStart), d(ovEnd)),
       worstLibido: `${formatHumanDateRangeNoYear(d(1), d(bleed))}, ${formatHumanDateRangeNoYear(d(pmsStart), d(cycleLen))}`,
-      pregnancy: formatHumanDateRangeNoYear(d(fertileStart), d(fertileEnd)),
     };
   }, [day1, bleedOverride, cycleLength]);
 
@@ -797,24 +721,8 @@ function NavigateInner() {
                     Edit Last Period Date
                   </Link>
 
-                  <button
-                    type="button"
-                    onClick={toggleHidePregnancy}
-                    style={{
-                      display: "block",
-                      width: "100%",
-                      padding: "10px 14px",
-                      textAlign: "left",
-                      border: "none",
-                      background: "transparent",
-                      color: "var(--foreground)",
-                      fontSize: 14,
-                      fontWeight: 600,
-                      cursor: "pointer",
-                    }}
-                  >
-                    {hidePregnancy ? "Show Pregnancy Section" : "Hide Pregnancy Section"}
-                  </button>
+                  <DailyHeadsUpMenuItem cycle={headsUpCycle} onDone={() => setMenuOpen(false)} />
+
 
                   <Link
                     href="/about"
@@ -905,12 +813,6 @@ function NavigateInner() {
                 <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{quickDateRanges.worstLibido}</div>
                 <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Not in the mood. Don't push it.</div>
               </div>
-
-              <div style={{ padding: 12, borderRadius: 12, background: "#EEF7FF", border: "1px solid #2563EB" }}>
-                <div style={{ fontSize: 11, fontWeight: 800, color: "#0B4A84", marginBottom: 4 }}>Best for pregnancy</div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: "var(--foreground)" }}>{quickDateRanges.pregnancy}</div>
-                <div style={{ fontSize: 11, color: "#333", marginTop: 4 }}>Fertile window. Highest odds.</div>
-              </div>
             </div>
 
             <div style={{ marginTop: 10, padding: 12, borderRadius: 12, background: "#F1FFF5", border: "1px solid #16A34A" }}>
@@ -987,7 +889,7 @@ function NavigateInner() {
             transition: drag.current.active ? "none" : "transform 160ms ease-out",
           }}
                >
-          <DayCard d={current} hidePregnancy={hidePregnancy} />
+          <DayCard d={current} />
         </div>
 
         <div style={{ display: "flex", justifyContent: "space-between", gap: 10, marginTop: 10 }}>

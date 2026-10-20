@@ -1,7 +1,7 @@
 <?xml version='1.0' encoding='utf-8'?>
 <resources>
-    <string name="app_name">Cycle Forecast</string>
-    <string name="title_activity_main">Cycle Forecast</string>
-    <string name="package_name">com.damsstudios.cycleforecast</string>
-    <string name="custom_url_scheme">com.damsstudios.cycleforecast</string>
+    <string name="app_name">Her Mood Map</string>
+    <string name="title_activity_main">Her Mood Map</string>
+    <string name="package_name">com.damsstudios.hermoodmap</string>
+    <string name="custom_url_scheme">com.damsstudios.hermoodmap</string>
 </resources>

@@ -1,97 +1,153 @@
-# CHANGED LINES:
-# - android-debug.scripts: ADDED "Generate app icons" step (uses resources/icon.png via @capacitor/assets)
-# - ios-release.scripts: ADDED "Generate app icons" step (uses resources/icon.png via @capacitor/assets)
-# - ios-release.scripts: REMOVED "Prepare App Store Connect key file for publishing" workaround step
-# - ios-release.publishing.app_store_connect: CHANGED to use standard env vars (APP_STORE_CONNECT_PRIVATE_KEY / KEY_ID / ISSUER_ID)
+# Her Mood Map — Codemagic CI
+#
+# Capacitor 8: Node 22, JDK 21, Android compile/target SDK 36, Xcode 26.
+# Version name for both stores comes from package.json "version".
+# Build numbers come from Codemagic's $BUILD_NUMBER (strictly increasing).
+#
+# Required in Codemagic UI:
+#   - Android code signing: upload keystore with reference "hermoodmap-upload"
+#   - Group "google_play": GCLOUD_SERVICE_ACCOUNT_CREDENTIALS (Play service account JSON)
+#   - Group "applestore": APP_STORE_CONNECT_PRIVATE_KEY / _KEY_ID / _ISSUER_ID
+#   - iOS code signing: distribution cert + App Store profile for com.damsstudios.hermoodmap
+
+definitions:
+  versions: &versions
+    node: 22
+    java: 21
+
+  scripts:
+    - &install
+      name: Install dependencies
+      script: npm ci
+    - &build_web
+      name: Build web (static export to /out)
+      script: npm run build
+    - &set_versions
+      name: Set version name and build numbers
+      script: |
+        APP_VERSION_NAME=$(node -p "require('./package.json').version")
+        echo "APP_VERSION_NAME=$APP_VERSION_NAME" >> $CM_ENV
+        echo "ANDROID_VERSION_CODE=$BUILD_NUMBER" >> $CM_ENV
+        # +100 offset clears any CFBundleVersion used by earlier manual/TestFlight uploads.
+        echo "IOS_BUILD_NUMBER=$((BUILD_NUMBER + 100))" >> $CM_ENV
+        echo "Version $APP_VERSION_NAME, Android $BUILD_NUMBER, iOS $((BUILD_NUMBER + 100))"
 
 workflows:
   android-debug:
     name: Android Debug APK
     max_build_duration: 60
-
     environment:
-      node: 20
-
+      <<: *versions
     scripts:
-      - name: Install dependencies
-        script: npm install
-
-      - name: Build web
-        script: npm run build
-
+      - *install
+      - *build_web
       - name: Generate app icons
         script: npx --yes @capacitor/assets generate --android
-
       - name: Capacitor sync (Android)
         script: npx cap sync android
-
       - name: Build Android debug APK
         script: |
           cd android
           chmod +x gradlew
           ./gradlew assembleDebug
-
     artifacts:
       - android/app/build/outputs/apk/debug/*.apk
 
-  ios-release:
-    name: iOS Release (IPA)
+  android-release:
+    name: Android Release (signed AAB)
     max_build_duration: 60
-
     environment:
-      node: 20
-      xcode: latest
+      <<: *versions
+      android_signing:
+        - hermoodmap-upload
+      groups:
+        - google_play
+    scripts:
+      - *install
+      - *build_web
+      - *set_versions
+      - name: Generate app icons
+        script: npx --yes @capacitor/assets generate --android
+      - name: Capacitor sync (Android)
+        script: npx cap sync android
+      - name: Build signed release AAB
+        script: |
+          cd android
+          chmod +x gradlew
+          ./gradlew bundleRelease
+      - name: Verify AAB is signed
+        script: jarsigner -verify android/app/build/outputs/bundle/release/app-release.aab
+    artifacts:
+      - android/app/build/outputs/bundle/release/*.aab
+    publishing:
+      # The FIRST AAB must be uploaded by hand in Play Console (the API can't
+      # create the app). After that, CI uploads here. Draft is required while
+      # the app has never been published; flip to false after first rollout.
+      google_play:
+        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+        track: alpha # closed testing — needed for the 12-tester / 14-day rule
+        submit_as_draft: true
 
+  ios-release:
+    name: iOS Release (IPA → TestFlight)
+    max_build_duration: 60
+    environment:
+      <<: *versions
+      xcode: latest # must be Xcode 26+; checked below
       ios_signing:
         distribution_type: app_store
         bundle_identifier: com.damsstudios.hermoodmap
-
       vars:
         APP_TEAM_ID: "KX8Z996CGK"
-        XCODE_WORKSPACE: "App.xcworkspace"
-        XCODE_SCHEME: "App"
-
-        PROFILE_REFERENCE: "appstore-profile"
-        CERT_REFERENCE: "apple-distribution"
-
+        APP_DISPLAY_NAME: "Her Mood Map"
       groups:
         - applestore
-
     scripts:
-      - name: Install dependencies
-        script: npm ci
-
-      - name: Build web
-        script: npm run build
-
-      - name: Capacitor add + sync (iOS)
+      - name: Check Xcode version (App Store requires 26+)
         script: |
-          npx cap add ios || true
+          xcodebuild -version
+          MAJOR=$(xcodebuild -version | head -1 | awk '{print $2}' | cut -d. -f1)
+          if [ "$MAJOR" -lt 26 ]; then echo "Xcode $MAJOR < 26"; exit 1; fi
+      - *install
+      - *build_web
+      - *set_versions
+      - name: Capacitor add + sync (iOS, SPM)
+        script: |
+          # iOS project is not committed; generate it fresh each build.
+          rm -rf ios
+          npx cap add ios
           npx cap sync ios
-
       - name: Generate app icons
         script: npx --yes @capacitor/assets generate --ios
-
+      - name: Configure iOS project (build number, iPhone-only, display name)
+        script: |
+          PBX=ios/App/App.xcodeproj/project.pbxproj
+          PLIST=ios/App/App/Info.plist
+          sed -i '' -E "s/CURRENT_PROJECT_VERSION = [^;]+;/CURRENT_PROJECT_VERSION = $IOS_BUILD_NUMBER;/g" "$PBX"
+          sed -i '' -E "s/MARKETING_VERSION = [^;]+;/MARKETING_VERSION = $APP_VERSION_NAME;/g" "$PBX"
+          sed -i '' -E 's/TARGETED_DEVICE_FAMILY = "?[0-9,]+"?;/TARGETED_DEVICE_FAMILY = 1;/g' "$PBX"
+          /usr/libexec/PlistBuddy -c "Set :CFBundleDisplayName $APP_DISPLAY_NAME" "$PLIST"
+          # No custom encryption: skips the export-compliance prompt on every TestFlight build.
+          /usr/libexec/PlistBuddy -c "Add :ITSAppUsesNonExemptEncryption bool false" "$PLIST" 2>/dev/null \
+            || /usr/libexec/PlistBuddy -c "Set :ITSAppUsesNonExemptEncryption false" "$PLIST"
+          grep -E "CURRENT_PROJECT_VERSION|MARKETING_VERSION|TARGETED_DEVICE_FAMILY|IPHONEOS_DEPLOYMENT_TARGET" "$PBX" | sort | uniq -c
       - name: Install signing assets into keychain
         script: |
           keychain initialize
           keychain add-certificates
-
       - name: Apply provisioning profiles to Xcode project
-        script: xcode-project use-profiles
-
+        script: xcode-project use-profiles --project ios/App/App.xcodeproj
       - name: Build IPA for App Store
         script: |
           cd ios/App
+          # Capacitor 8 uses Swift Package Manager: build the .xcodeproj (no workspace).
           xcode-project build-ipa \
-            --workspace "$XCODE_WORKSPACE" \
-            --scheme "$XCODE_SCHEME" \
+            --project App.xcodeproj \
+            --scheme App \
             --archive-flags="-destination 'generic/platform=iOS'"
-
     artifacts:
       - ios/App/build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log
-
     publishing:
       app_store_connect:
         api_key: $APP_STORE_CONNECT_PRIVATE_KEY
