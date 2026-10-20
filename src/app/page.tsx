@@ -6,10 +6,17 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useState, useEffect, Suspense } from "react";
-import { forecastUrl, loadSettings, saveSettings } from "../lib/settings";
+import {
+  DEFAULT_BLEED_DAYS,
+  DEFAULT_CYCLE_LENGTH,
+  LIMITS,
+  forecastUrl,
+  loadSettings,
+  parseBleedDays,
+  parseCycleLength,
+  saveSettings,
+} from "../lib/settings";
 
-const DEFAULT_CYCLE_LENGTH = 28;
-const DEFAULT_BLEED_DAYS = 5;
 const ONBOARDING_KEY = "cf_onboarding_done";
 
 function startOfDay(d: Date): Date {
@@ -31,6 +38,7 @@ function HomePageContent() {
 
   const [age, setAge] = useState("");
   const [day1, setDay1] = useState("");
+  const [cycleLen, setCycleLen] = useState(String(DEFAULT_CYCLE_LENGTH));
 
   const [showPeriodStillOn, setShowPeriodStillOn] = useState(false);
   const [showPeriodEndQuestion, setShowPeriodEndQuestion] = useState(false);
@@ -46,8 +54,10 @@ function HomePageContent() {
   useEffect(() => {
     const qDay1 = searchParams.get("day1");
     const qAge = searchParams.get("age");
+    const qCl = searchParams.get("cl");
     if (qDay1) setDay1(qDay1);
     if (qAge != null) setAge(qAge);
+    if (qCl) setCycleLen(String(parseCycleLength(qCl)));
   }, [searchParams]);
 
   // Returning user: if a date is saved on this phone and the user is not editing it
@@ -87,17 +97,22 @@ function HomePageContent() {
 
   const todayDayIndex = (): number => daysAgo() + 1;
 
+  // Her typical cycle length from the field, always inside the allowed range.
+  const currentCycleLength = (): number => parseCycleLength(cycleLen);
+
   function go() {
     if (!day1) return;
     if (day1InPast()) {
       setShowPeriodStillOn(true);
       return;
     }
-    navigate(DEFAULT_CYCLE_LENGTH, DEFAULT_BLEED_DAYS);
+    navigate(currentCycleLength(), DEFAULT_BLEED_DAYS);
   }
 
-  function navigate(cl: number, bd: number) {
+  function navigate(clRaw: number, bdRaw: number) {
     if (!day1) return;
+    const cl = parseCycleLength(clRaw);
+    const bd = parseBleedDays(bdRaw);
     const a = age || "";
     saveSettings({ day1, cl, bd });
     router.push(`/navigate?age=${encodeURIComponent(a)}&day1=${encodeURIComponent(day1)}&cl=${cl}&bd=${bd}`);
@@ -118,7 +133,7 @@ function HomePageContent() {
   function confirmPeriodStillOn() {
     const bd = todayDayIndex();
     setShowPeriodStillOn(false);
-    navigate(DEFAULT_CYCLE_LENGTH, bd);
+    navigate(currentCycleLength(), bd);
   }
 
   function confirmPeriodOver() {
@@ -161,7 +176,7 @@ function HomePageContent() {
     bd = Math.min(maxBd, Math.max(1, bd));
 
     setShowPeriodEndQuestion(false);
-    navigate(DEFAULT_CYCLE_LENGTH, bd);
+    navigate(currentCycleLength(), bd);
   }
 
   const minEndDate = day1 || undefined;
@@ -320,6 +335,43 @@ function HomePageContent() {
         />
         <span style={{ fontSize: "0.8125rem", color: "var(--text-secondary)", marginTop: "0.375rem", display: "block" }}>
           Tap the box above to open the calendar and pick the date.
+        </span>
+      </label>
+
+      <label style={{ display: "block", marginTop: "1.25rem", fontSize: "0.9375rem", fontWeight: 600 }}>
+        Her typical cycle length (days)
+        <input
+          type="number"
+          inputMode="numeric"
+          min={LIMITS.cycleLength.min}
+          max={LIMITS.cycleLength.max}
+          value={cycleLen}
+          onChange={(e) => setCycleLen(e.target.value)}
+          style={{
+            width: "100%",
+            padding: "0.75rem 0.875rem",
+            marginTop: "0.375rem",
+            fontSize: "1rem",
+            border: "1px solid var(--input-border)",
+            borderRadius: 10,
+            background: "var(--input-bg)",
+            color: "var(--foreground)",
+            outline: "none",
+          }}
+          onFocus={(e) => {
+            e.currentTarget.style.borderColor = "var(--input-focus-border)";
+            e.currentTarget.style.boxShadow = "0 0 0 2px rgba(22, 163, 74, 0.2)";
+          }}
+          onBlur={(e) => {
+            // Snap back into the allowed range when she leaves the field
+            setCycleLen(String(parseCycleLength(e.target.value)));
+            e.currentTarget.style.borderColor = "var(--input-border)";
+            e.currentTarget.style.boxShadow = "none";
+          }}
+        />
+        <span style={{ fontSize: "0.8125rem", color: "var(--text-secondary)", marginTop: "0.375rem", display: "block" }}>
+          If her cycle is usually longer or shorter than {DEFAULT_CYCLE_LENGTH} days, set it here for a better estimate (
+          {LIMITS.cycleLength.min}–{LIMITS.cycleLength.max}).
         </span>
       </label>
 

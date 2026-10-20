@@ -11,7 +11,7 @@
 import Link from "next/link";
 import React, { Suspense, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { forecastUrl, loadSettings, saveSettings } from "../../lib/settings";
+import { LIMITS, forecastUrl, loadSettings, parseBleedDays, parseCycleLength, saveSettings } from "../../lib/settings";
 
 type Phase = "Menstrual" | "Follicular" | "Ovulatory" | "Luteal" | "PMS";
 type RiskLevel = "Low" | "Medium" | "High";
@@ -411,8 +411,10 @@ function NavigateInner() {
 
   const age = sp.get("age") || "";
   const day1Str = sp.get("day1") || "";
-  const bleedOverride = Number(sp.get("bd") || DEFAULTS.bleedDays);
-  const cycleLength = Number(sp.get("cl") || DEFAULTS.cycleLength);
+  // Values from the address are always forced into the allowed range (cycle 21-35 days, period 1-10 days),
+  // so a typo or an old link can never break the phase maths.
+  const bleedOverride = parseBleedDays(sp.get("bd"), DEFAULTS.bleedDays);
+  const cycleLength = parseCycleLength(sp.get("cl"), DEFAULTS.cycleLength);
 
   // No date in the address (for example the app was opened on this page directly):
   // use the saved one, or send the user to the start screen.
@@ -489,12 +491,15 @@ function NavigateInner() {
   const current = useMemo(() => build(viewOffset), [viewOffset, bleedOverride, cycleLength]);
 
   const showBleedQuestion = !dismissBleedPrompt && current.dayIndex === bleedOverride + 1;
-  const showNewPeriodQuestion = Number.isFinite(current.dayIndex) && current.dayIndex >= 28;
-  const isOverdueBanner = current.dayIndex >= 35;
+  const showNewPeriodQuestion = Number.isFinite(current.dayIndex) && current.dayIndex >= cycleLength;
+  // A week past her usual cycle length counts as overdue
+  const isOverdueBanner = current.dayIndex >= cycleLength + 7;
 
   const qpBase = `age=${encodeURIComponent(age)}&day1=${encodeURIComponent(day1Str)}&cl=${encodeURIComponent(String(cycleLength))}`;
 
   function extendBleedToCurrentDay() {
+    // The period length is capped (see LIMITS). Past the cap, stop asking so the prompt can't loop.
+    if (current.dayIndex > LIMITS.bleedDays.max) setDismissBleedPrompt(true);
     router.push(`/navigate?${qpBase}&bd=${encodeURIComponent(String(current.dayIndex))}`);
     router.refresh();
   }
@@ -522,7 +527,8 @@ function NavigateInner() {
     const d = current.date;
 
     const newDay1Str = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    const learnedCl = current.dayIndex;
+    // The length she actually had, kept inside the allowed range
+    const learnedCl = parseCycleLength(current.dayIndex);
 
     try {
       if (typeof window !== "undefined") {
@@ -797,7 +803,7 @@ function NavigateInner() {
                   </button>
 
                   <Link
-                    href={`/?day1=${encodeURIComponent(day1Str)}&age=${encodeURIComponent(age)}`}
+                    href={`/?day1=${encodeURIComponent(day1Str)}&age=${encodeURIComponent(age)}&cl=${cycleLength}`}
                     style={{
                       display: "block",
                       padding: "10px 14px",
@@ -809,7 +815,7 @@ function NavigateInner() {
                     }}
                     onClick={() => setMenuOpen(false)}
                   >
-                    Edit Last Period Date
+                    Edit Date &amp; Cycle Length
                   </Link>
 
                   <button

@@ -23,6 +23,29 @@ function clamp(n: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, n));
 }
 
+export const DEFAULT_CYCLE_LENGTH = 28;
+export const DEFAULT_BLEED_DAYS = 5;
+
+function toNumberOrNaN(v: unknown): number {
+  if (v === null || v === undefined) return NaN;
+  if (typeof v === "string" && v.trim() === "") return NaN;
+  return Number(v);
+}
+
+/** Turns any value (URL text, typed input, saved data) into a cycle length within the limits. */
+export function parseCycleLength(v: unknown, fallback: number = DEFAULT_CYCLE_LENGTH): number {
+  const n = toNumberOrNaN(v);
+  if (!Number.isFinite(n)) return fallback;
+  return clamp(Math.round(n), LIMITS.cycleLength.min, LIMITS.cycleLength.max);
+}
+
+/** Turns any value into a period length within the limits. */
+export function parseBleedDays(v: unknown, fallback: number = DEFAULT_BLEED_DAYS): number {
+  const n = toNumberOrNaN(v);
+  if (!Number.isFinite(n)) return fallback;
+  return clamp(Math.round(n), LIMITS.bleedDays.min, LIMITS.bleedDays.max);
+}
+
 function isValidDateString(s: unknown): s is string {
   if (typeof s !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return false;
   const d = new Date(s + "T12:00:00");
