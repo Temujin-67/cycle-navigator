@@ -7,8 +7,8 @@
 import type { CapacitorConfig } from "@capacitor/cli";
 
 const config: CapacitorConfig = {
-  appId: "com.damsstudios.hermoodmap",
-  appName: "Her Mood Map",
+  appId: "com.damsstudios.eggshells",
+  appName: "Eggshells",
   webDir: "out",
   bundledWebRuntime: false,
 };

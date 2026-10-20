@@ -1,10 +1,10 @@
 apply plugin: 'com.android.application'
 
 android {
-    namespace "com.damsstudios.cycleforecast"
+    namespace "com.damsstudios.eggshells"
     compileSdk rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "com.damsstudios.cycleforecast"
+        applicationId "com.damsstudios.eggshells"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

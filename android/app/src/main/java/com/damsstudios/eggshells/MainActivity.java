@@ -1,4 +1,4 @@
-package com.damsstudios.cycleforecast;
+package com.damsstudios.eggshells;
 
 import com.getcapacitor.BridgeActivity;
 

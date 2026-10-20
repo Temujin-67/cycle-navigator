@@ -44,7 +44,7 @@ workflows:
 
       ios_signing:
         distribution_type: app_store
-        bundle_identifier: com.damsstudios.hermoodmap
+        bundle_identifier: com.damsstudios.eggshells
 
       vars:
         APP_TEAM_ID: "KX8Z996CGK"
